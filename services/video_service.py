@@ -1,47 +1,46 @@
 from moviepy.editor import *
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
 
 def create_video(
         name,
         audio_file):
 
-    audio = AudioFileClip(
-        audio_file
-    )
+    audio = AudioFileClip(audio_file)
 
     duration = audio.duration
 
-    bg = ColorClip(
-        size=(1280,720),
-        color=(255,102,204),
-        duration=duration
+    img = Image.new(
+        "RGB",
+        (1280,720),
+        color=(255,102,204)
     )
 
-    text = TextClip(
-        f"Happy Birthday {name}",
-        fontsize=80,
-        color="white"
+    draw = ImageDraw.Draw(img)
+
+    text = f"Happy Birthday\n{name}"
+
+    draw.text(
+        (300,250),
+        text,
+        fill="white"
     )
 
-    text = text.set_duration(
-        duration
-    )
+    image_path = f"generated/{name}.png"
 
-    text = text.set_position(
-        "center"
-    )
+    img.save(image_path)
 
-    final = CompositeVideoClip(
-        [bg,text]
-    )
+    clip = ImageClip(
+        image_path
+    ).set_duration(duration)
 
-    final = final.set_audio(
-        audio
-    )
+    clip = clip.set_audio(audio)
 
     output = f"generated/{name}.mp4"
 
-    final.write_videofile(
+    clip.write_videofile(
         output,
         fps=24
     )
