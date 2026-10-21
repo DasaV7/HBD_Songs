@@ -13,6 +13,13 @@ from services.video_service import (
     create_video
 )
 
+import os
+
+os.makedirs(
+    "generated",
+    exist_ok=True
+)
+
 st.set_page_config(
     page_title="Birthday Video Generator"
 )
