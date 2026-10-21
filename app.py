@@ -5,9 +5,7 @@ from services.lyrics_service import (
     generate_lyrics
 )
 
-from services.audio_service import (
-    generate_audio
-)
+from services.audio_service import generate_audio
 
 from services.video_service import (
     create_video
