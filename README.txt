@@ -1,6 +1,6 @@
-streamlit
-edge-tts
-moviepy
-pillow
+streamlit==1.49.1
+moviepy==1.0.3
+edge-tts==7.2.3
+pillow==11.3.0
 google-api-python-client
 google-auth-oauthlib
