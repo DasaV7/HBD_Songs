@@ -1,12 +1,12 @@
 import asyncio
-import edge_tts
+import edge-tts
 
 
 async def generate_audio(
         text,
         output_file):
 
-    communicate = edge_tts.Communicate(
+    communicate = edge-tts.Communicate(
         text,
         voice="en-US-JennyNeural"
     )
