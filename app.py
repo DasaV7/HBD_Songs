@@ -1,6 +1,13 @@
 import streamlit as st
 import asyncio
 
+import os
+
+os.makedirs(
+    "generated",
+    exist_ok=True
+)
+
 from services.lyrics_service import (
     generate_lyrics
 )
@@ -11,13 +18,6 @@ from services.audio_service import (
 
 from services.video_service import (
     create_video
-)
-
-import os
-
-os.makedirs(
-    "generated",
-    exist_ok=True
 )
 
 st.set_page_config(
