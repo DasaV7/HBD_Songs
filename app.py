@@ -66,10 +66,17 @@ if st.button("Generate Video"):
             f"generated/{name}_final.mp3"
         )
         
-        merge_with_background_music(
-            voice_file,
-            audio_file
-        )
+        try:
+        
+            merge_with_background_music(
+                voice_file,
+                audio_file
+            )
+        
+        except Exception as e:
+        
+            st.error(str(e))
+            st.stop()
 
         video_path = create_video(
             name,
