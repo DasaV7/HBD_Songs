@@ -77,6 +77,13 @@ if st.button("Generate Video"):
         
             st.error(str(e))
             st.stop()
+            
+        st.write("Audio File:", audio_file)
+
+        if os.path.exists(audio_file):
+            st.success("Audio file created")
+        else:
+            st.error("Audio file missing")
 
         video_path = create_video(
             name,
