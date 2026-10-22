@@ -2,45 +2,96 @@ from moviepy.editor import *
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
+from services.assets_service import (
+    get_random_background
+)
+
+import os
 
 
 def create_video(
         name,
         audio_file):
 
-    audio = AudioFileClip(audio_file)
+    os.makedirs(
+        "generated",
+        exist_ok=True
+    )
+
+    background = get_random_background()
+
+    audio = AudioFileClip(
+        audio_file
+    )
 
     duration = audio.duration
 
-    img = Image.new(
-        "RGB",
-        (1280,720),
-        color=(255,102,204)
+    clip = (
+        ImageClip(background)
+        .set_duration(duration)
     )
 
-    draw = ImageDraw.Draw(img)
+    clip = clip.resize(
+        width=1280
+    )
 
-    text = f"Happy Birthday\n{name}"
+    txt_image = Image.new(
+        "RGBA",
+        (1280,720),
+        (0,0,0,0)
+    )
+
+    draw = ImageDraw.Draw(
+        txt_image
+    )
+
+    try:
+
+        font = ImageFont.truetype(
+            "DejaVuSans.ttf",
+            80
+        )
+
+    except:
+
+        font = ImageFont.load_default()
 
     draw.text(
-        (300,250),
-        text,
+        (150,250),
+        f"🎂 Happy Birthday\n{name}",
+        font=font,
         fill="white"
     )
 
-    image_path = f"generated/{name}.png"
+    text_path = (
+        f"generated/{name}_text.png"
+    )
 
-    img.save(image_path)
+    txt_image.save(
+        text_path
+    )
 
-    clip = ImageClip(
-        image_path
-    ).set_duration(duration)
+    text_clip = (
+        ImageClip(text_path)
+        .set_duration(duration)
+    )
 
-    clip = clip.set_audio(audio)
+    final = CompositeVideoClip(
+        [
+            clip,
+            text_clip
+        ]
+    )
 
-    output = f"generated/{name}.mp4"
+    final = final.set_audio(
+        audio
+    )
 
-    clip.write_videofile(
+    output = (
+        f"generated/{name}.mp4"
+    )
+
+    final.write_videofile(
         output,
         fps=24
     )
