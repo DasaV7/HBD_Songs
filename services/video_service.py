@@ -31,11 +31,6 @@ def create_video(
         .set_duration(duration)
     )
 
-    clip = (
-        ImageClip(background)
-        .set_duration(duration)
-    )
-
     txt_image = Image.new(
         "RGBA",
         (1280,720),
