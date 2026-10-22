@@ -8,7 +8,8 @@ async def generate_audio(
 
     communicate = edge_tts.Communicate(
         text,
-        voice="en-US-JennyNeural"
+        #voice="en-US-JennyNeural"
+        voice="en-US-GuyNeural"
     )
 
     await communicate.save(
