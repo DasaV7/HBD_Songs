@@ -21,33 +21,16 @@ def get_random_background():
 
     return random.choice(files)
 
-
 def get_random_music():
 
-    music_folder = "assets/music"
+    folder = "assets/music"
 
-    files = []
+    files = [
+        os.path.join(folder, f)
+        for f in os.listdir(folder)
+    ]
 
-    for file in os.listdir(music_folder):
-
-        if file.lower().endswith(
-            (
-                ".mp3",
-                ".wav"
-            )
-        ):
-
-            files.append(
-                os.path.join(
-                    music_folder,
-                    file
-                )
-            )
-
-    if not files:
-
-        raise Exception(
-            "No valid music files found"
-        )
+    print("FILES FOUND:")
+    print(files)
 
     return random.choice(files)
