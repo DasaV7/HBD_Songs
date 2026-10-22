@@ -21,12 +21,12 @@ def merge_with_background_music(
             music_file
         )
 
-    except Exception as e:
-
-        print("FAILED FILE:", music_file)
-        raise Exception(
-            f"Cannot load music file: {music_file}\n{str(e)}"
-        )
+        except Exception as e:
+        
+            print("MUSIC FILE:", music_file)
+            print("ERROR:", str(e))
+        
+            raise
 
     music = music.volumex(0.1)
 
