@@ -42,7 +42,8 @@ def merge_with_background_music(
     )
 
     final_audio.write_audiofile(
-        output_file
+            output_file,
+            fps=44100
     )
 
     return output_file
