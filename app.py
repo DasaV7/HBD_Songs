@@ -20,6 +20,10 @@ from services.video_service import (
     create_video
 )
 
+from services.music_service import (
+    merge_with_background_music
+)
+
 st.set_page_config(
     page_title="Birthday Video Generator"
 )
