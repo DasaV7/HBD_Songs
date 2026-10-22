@@ -26,11 +26,16 @@ def get_random_music():
     folder = "assets/music"
 
     files = [
-        os.path.join(folder, f)
-        for f in os.listdir(folder)
+        os.path.join(folder, file)
+        for file in os.listdir(folder)
+        if file.lower().endswith(
+            (".mp3", ".wav")
+        )
     ]
 
-    print("FILES FOUND:")
-    print(files)
+    if not files:
+        raise Exception(
+            "No music files found in assets/music"
+        )
 
     return random.choice(files)
