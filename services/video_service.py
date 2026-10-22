@@ -31,8 +31,9 @@ def create_video(
         .set_duration(duration)
     )
 
-    clip = clip.resize(
-        width=1280
+    clip = (
+        ImageClip(background)
+        .set_duration(duration)
     )
 
     txt_image = Image.new(
