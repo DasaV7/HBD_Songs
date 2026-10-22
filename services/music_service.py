@@ -19,13 +19,15 @@ def merge_with_background_music(
         music_file
     )
 
-    music = music.volumex(
-        0.15
-    )
+    if music.duration > voice.duration:
 
-    music = music.subclip(
-        0,
-        voice.duration
+        music = music.subclip(
+            0,
+            voice.duration
+        )
+
+    music = music.volumex(
+        0.10
     )
 
     final_audio = CompositeAudioClip(
