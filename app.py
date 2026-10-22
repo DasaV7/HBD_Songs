@@ -60,6 +60,8 @@ if st.button("Generate Video"):
             )
         )
 
+        st.audio(audio_file)
+
         voice_file = audio_file
 
         audio_file = (
