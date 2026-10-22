@@ -2,6 +2,7 @@ from moviepy.editor import *
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
+
 from services.assets_service import (
     get_random_background
 )
@@ -12,11 +13,6 @@ import os
 def create_video(
         name,
         audio_file):
-
-    os.makedirs(
-        "generated",
-        exist_ok=True
-    )
 
     background = get_random_background()
 
@@ -31,44 +27,37 @@ def create_video(
         .set_duration(duration)
     )
 
-    txt_image = Image.new(
+    txt = Image.new(
         "RGBA",
-        (1280,720),
-        (0,0,0,0)
+        (1280, 720),
+        (0, 0, 0, 0)
     )
 
-    draw = ImageDraw.Draw(
-        txt_image
-    )
+    draw = ImageDraw.Draw(txt)
 
     try:
-
         font = ImageFont.truetype(
             "DejaVuSans.ttf",
-            80
+            70
         )
-
     except:
-
         font = ImageFont.load_default()
 
     draw.text(
-        (150,250),
+        (100, 250),
         f"🎂 Happy Birthday\n{name}",
-        font=font,
-        fill="white"
+        fill="white",
+        font=font
     )
 
-    text_path = (
+    text_file = (
         f"generated/{name}_text.png"
     )
 
-    txt_image.save(
-        text_path
-    )
+    txt.save(text_file)
 
     text_clip = (
-        ImageClip(text_path)
+        ImageClip(text_file)
         .set_duration(duration)
     )
 
@@ -79,9 +68,7 @@ def create_video(
         ]
     )
 
-    final = final.set_audio(
-        audio
-    )
+    final.audio = audio
 
     output = (
         f"generated/{name}.mp4"
@@ -89,6 +76,8 @@ def create_video(
 
     final.write_videofile(
         output,
+        codec="libx264",
+        audio_codec="aac",
         fps=24
     )
 
