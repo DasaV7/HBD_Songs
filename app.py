@@ -56,6 +56,17 @@ if st.button("Generate Video"):
             )
         )
 
+        voice_file = audio_file
+
+        audio_file = (
+            f"generated/{name}_final.mp3"
+        )
+        
+        merge_with_background_music(
+            voice_file,
+            audio_file
+        )
+
         video_path = create_video(
             name,
             audio_file
