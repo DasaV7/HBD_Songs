@@ -4,20 +4,23 @@ from services.assets_service import (
     get_random_music
 )
 
-
 def merge_with_background_music(
         voice_file,
         output_file):
+
+    music_file = get_random_music()
+
+    print("Selected music:", music_file)
 
     voice = AudioFileClip(
         voice_file
     )
 
-    music_file = get_random_music()
-
     music = AudioFileClip(
         music_file
     )
+
+    music = music.volumex(0.10)
 
     if music.duration > voice.duration:
 
@@ -25,10 +28,6 @@ def merge_with_background_music(
             0,
             voice.duration
         )
-
-    music = music.volumex(
-        0.10
-    )
 
     final_audio = CompositeAudioClip(
         [
