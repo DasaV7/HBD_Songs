@@ -77,39 +77,38 @@ def create_video(
     ]
 
     random.shuffle(images)
-
     slides = [
-
+    
         create_slide(
-            f"🎂 Happy Birthday {name}",
+            f"🎂 Happy Birthday {name} 🎂",
             images[0],
             slide_duration,
             "generated/slide1.png"
         ),
-
+    
         create_slide(
-            "Today Is Your Special Day",
+            "Wishing You Joy & Happiness",
             images[1],
             slide_duration,
             "generated/slide2.png"
         ),
-
+    
         create_slide(
             message,
             images[2],
             slide_duration,
             "generated/slide3.png"
         ),
-
+    
         create_slide(
-            "Enjoy Your Celebration",
+            "Celebrate Your Special Day!",
             images[3],
             slide_duration,
             "generated/slide4.png"
         ),
-
+    
         create_slide(
-            f"Thank You {name}",
+            f"Thank You {name}\nHave A Wonderful Year Ahead",
             images[4],
             slide_duration,
             "generated/slide5.png"
