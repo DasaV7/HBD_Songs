@@ -29,11 +29,25 @@ def create_slide(
         font = ImageFont.load_default()
 
     draw.text(
-        (100,300),
-        text,
-        fill="white",
-        font=font
-    )
+        bbox = draw.multiline_textbbox(
+            (0, 0),
+            text,
+            font=font
+        )
+        
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        x = (1280 - text_width) // 2
+        y = (720 - text_height) // 2
+        
+        draw.multiline_text(
+            (x, y),
+            text,
+            fill="white",
+            font=font,
+            align="center"
+        )
 
     img.save(output_file)
 
