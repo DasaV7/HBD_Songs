@@ -89,6 +89,7 @@ if st.button("Generate Video"):
 
         video_path = create_video(
             name,
+            message,
             audio_file
         )
 
