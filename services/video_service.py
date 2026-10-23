@@ -41,6 +41,14 @@ def create_slide(
     y = (720 - text_height) // 2
     
     draw.multiline_text(
+        (x+4, y+4),
+        text,
+        fill="black",
+        font=font,
+        align="center"
+    )
+    
+    draw.multiline_text(
         (x, y),
         text,
         fill="white",
