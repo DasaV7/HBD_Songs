@@ -37,12 +37,14 @@ def create_slide(
 
     img.save(output_file)
 
-    return (
+    clip = (
         ImageClip(output_file)
         .set_duration(duration)
         .fadein(1)
         .fadeout(1)
-        .resize(lambda t: 1 + (0.05 * t)))
+    )
+    
+    return clip
 
 def create_video(
         name,
