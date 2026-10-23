@@ -43,7 +43,7 @@ def create_slide(
         .fadein(1)
         .fadeout(1)
     )
-    
+
     return clip
 
 def create_video(
