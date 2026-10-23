@@ -42,7 +42,7 @@ def create_slide(
         .set_duration(duration)
         .fadein(1)
         .fadeout(1)
-        .resize(lambda t: 1 + (0.05 * t))
+        .resize(lambda t: 1 + (0.05 * t)))
 
 def create_video(
         name,
