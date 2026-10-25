@@ -84,7 +84,7 @@ def create_slide(
 
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
-            180
+            200
         )
 
     except:
