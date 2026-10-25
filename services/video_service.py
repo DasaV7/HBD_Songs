@@ -56,7 +56,7 @@ def create_slide(
     overlay = Image.new(
         "RGBA",
         img.size,
-        (0,0,0,260)
+        (0,0,0,120)
     )
 
     img = Image.alpha_composite(
@@ -84,7 +84,7 @@ def create_slide(
 
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
-            260
+            180
         )
 
     except:
