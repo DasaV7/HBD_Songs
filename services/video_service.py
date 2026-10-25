@@ -15,8 +15,21 @@ def create_slide(
 ):
 
     img = Image.open(background)
-
-    img = img.resize((1280,720))
+    
+    img.thumbnail((1280, 720))
+    
+    canvas = Image.new(
+        "RGB",
+        (1280,720),
+        (20,20,20)
+    )
+    
+    x = (1280 - img.width) // 2
+    y = (720 - img.height) // 2
+    
+    canvas.paste(img, (x,y))
+    
+    img = canvas
 
     draw = ImageDraw.Draw(img)
 
