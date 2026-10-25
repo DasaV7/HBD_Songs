@@ -80,7 +80,7 @@ def create_slide(
         COLORS
     )
 
-    # try:
+    try:
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
             240
