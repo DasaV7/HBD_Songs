@@ -88,6 +88,11 @@ def create_slide(
     # except:
     #     font = ImageFont.load_default()
 
+    font = ImageFont.truetype(
+        "DejaVuSans-Bold.ttf",
+        240
+    )
+
     max_width = 1100
     
     while True:
