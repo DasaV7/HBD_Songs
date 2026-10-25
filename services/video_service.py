@@ -35,8 +35,8 @@ def create_slide(
 
     try:
         font = ImageFont.truetype(
-            "DejaVuSans.ttf",
-            70
+            "DejaVuSans-Bold.ttf",
+            110
         )
     except:
         font = ImageFont.load_default()
