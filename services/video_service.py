@@ -81,17 +81,12 @@ def create_slide(
     )
 
     # try:
-    #     font = ImageFont.truetype(
-    #         "DejaVuSans-Bold.ttf",
-    #         240
-    #     )
-    # except:
-    #     font = ImageFont.load_default()
-
-    font = ImageFont.truetype(
-        "DejaVuSans-Bold.ttf",
-        240
-    )
+        font = ImageFont.truetype(
+            "DejaVuSans-Bold.ttf",
+            240
+        )
+    except:
+        font = ImageFont.load_default()
 
     max_width = 1100
     
