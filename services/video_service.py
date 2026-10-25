@@ -88,14 +88,27 @@ def create_slide(
     except:
         font = ImageFont.load_default()
 
-    bbox = draw.multiline_textbbox(
-        (0,0),
-        text,
-        font=font
-    )
-
-    text_width = bbox[2]-bbox[0]
-    text_height = bbox[3]-bbox[1]
+    max_width = 1100
+    
+    while True:
+    
+        bbox = draw.multiline_textbbox(
+            (0, 0),
+            text,
+            font=font
+        )
+    
+        text_width = bbox[2] - bbox[0]
+    
+        if text_width <= max_width:
+            break
+    
+        font = ImageFont.truetype(
+            "DejaVuSans-Bold.ttf",
+            font.size - 10
+        )
+    
+    text_height = bbox[3] - bbox[1]
 
     x = (
         1280 - text_width
