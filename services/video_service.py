@@ -84,7 +84,7 @@ def create_slide(
 
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
-            180
+            500
         )
 
     except:
@@ -111,7 +111,7 @@ def create_slide(
     # Shadow
 
     draw.multiline_text(
-        (x+8,y+8),
+        (x+2,y+1),
         text,
         fill=(0,0,0),
         font=font,
