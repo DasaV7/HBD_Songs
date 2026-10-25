@@ -33,34 +33,30 @@ def create_slide(
     output_file
 ):
 
-    # Load image
     img = Image.open(background)
 
-    # Preserve aspect ratio
-    img.thumbnail((1280, 720))
+    img.thumbnail((1280,720))
 
-    # Create canvas
     canvas = Image.new(
         "RGB",
-        (1280, 720),
-        (20, 20, 20)
+        (1280,720),
+        (0,0,0)
     )
 
-    x_img = (1280 - img.width) // 2
-    y_img = (720 - img.height) // 2
+    x_img = (1280 - img.width)//2
+    y_img = (720 - img.height)//2
 
     canvas.paste(
         img,
-        (x_img, y_img)
+        (x_img,y_img)
     )
 
     img = canvas.convert("RGBA")
 
-    # Dark overlay for readability
     overlay = Image.new(
         "RGBA",
         img.size,
-        (0, 0, 0, 120)
+        (0,0,0,120)
     )
 
     img = Image.alpha_composite(
@@ -70,78 +66,82 @@ def create_slide(
 
     draw = ImageDraw.Draw(img)
 
-    # Load font
+    COLORS = [
+        "#0A84FF",
+        "#64D2FF",
+        "#5E5CE6",
+        "#BF5AF2",
+        "#FF375F",
+        "#30D158",
+        "#FFD60A"
+    ]
+
+    text_color = random.choice(
+        COLORS
+    )
+
     try:
 
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
-            140
+            180
         )
 
     except:
 
         font = ImageFont.load_default()
 
-    # Apple color per slide
-    text_color = random.choice(COLORS)
-
-    # Measure text
     bbox = draw.multiline_textbbox(
-        (0, 0),
+        (0,0),
         text,
         font=font
     )
 
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
+    text_width = bbox[2]-bbox[0]
+    text_height = bbox[3]-bbox[1]
 
-    x = (1280 - text_width) // 2
-    y = (720 - text_height) // 2
+    x = (
+        1280 - text_width
+    ) // 2
 
-    # Glass card
-    draw.rounded_rectangle(
-        (
-            80,
-            y - 40,
-            1200,
-            y + text_height + 40
-        ),
-        radius=40,
-        fill=(255, 255, 255, 40)
-    )
+    y = (
+        720 - text_height
+    ) // 2
 
     # Shadow
+
     draw.multiline_text(
-        (x + 6, y + 6),
+        (x+8,y+8),
         text,
-        fill="black",
+        fill=(0,0,0),
         font=font,
         align="center"
     )
 
-    # Main text
+    # Main Text
+
     draw.multiline_text(
-        (x, y),
+        (x,y),
         text,
         fill=text_color,
         font=font,
         align="center"
     )
 
-    # Save slide
-    img = img.convert("RGB")
+    img = img.convert(
+        "RGB"
+    )
 
-    img.save(output_file)
+    img.save(
+        output_file
+    )
 
-    # Create video clip
-    clip = (
+    return (
         ImageClip(output_file)
         .set_duration(duration)
         .fadein(1)
         .fadeout(1)
     )
-
-    return clip
 
 
 def create_video(
