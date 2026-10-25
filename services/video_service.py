@@ -3,8 +3,26 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
+APPLE_BLUE = "#0A84FF"
+APPLE_PINK = "#FF375F"
+APPLE_PURPLE = "#BF5AF2"
+APPLE_ORANGE = "#FF9F0A"
+APPLE_GREEN = "#30D158"
+
+COLORS = [
+    APPLE_BLUE,
+    APPLE_PINK,
+    APPLE_PURPLE,
+    APPLE_ORANGE,
+    APPLE_GREEN
+]
+
 import random
 import os
+
+text_color = random.choice(
+    COLORS
+)
 
 
 def create_slide(
@@ -32,15 +50,32 @@ def create_slide(
     img = canvas
 
     draw = ImageDraw.Draw(img)
-
+    
     try:
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
             110
         )
+        small_font = ImageFont.truetype(
+            "DejaVuSans.ttf",
+            55
+        )
     except:
         font = ImageFont.load_default()
 
+    overlay = Image.new(
+        "RGBA",
+        img.size,
+        (0,0,0,120)
+    )
+
+img = img.convert("RGBA")
+
+img = Image.alpha_composite(
+    img,
+    overlay
+)
+    
     bbox = draw.multiline_textbbox(
         (0, 0),
         text,
@@ -52,6 +87,14 @@ def create_slide(
     
     x = (1280 - text_width) // 2
     y = (720 - text_height) // 2
+    
+    draw.multiline_text(
+        (x,y),
+        text,
+        fill=text_color,
+        font=font,
+        align="center"
+    )
     
     draw.multiline_text(
         (x+4, y+4),
