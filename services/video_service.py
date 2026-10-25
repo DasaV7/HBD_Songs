@@ -141,12 +141,29 @@ def create_slide(
         stroke_width=6,
         stroke_fill="black"
     )
-    
 
     img = img.convert(
         "RGB"
     )
 
+    try:
+        confetti = Image.open(
+            "assets/overlays/confetti.png"
+        )
+    
+        confetti = confetti.resize(
+            (1280,720)
+        )
+    
+        img.paste(
+            confetti,
+            (0,0),
+            confetti
+        )
+    
+    except:
+        pass
+        
     img.save(
         output_file
     )
