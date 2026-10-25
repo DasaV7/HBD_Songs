@@ -1,11 +1,12 @@
 import shutil
-from services.assets_service import get_random_music
+from services.assets_service import (
+    get_random_music
+)
 
 
 async def generate_audio(
-    text,
-    output_file
-):
+        text,
+        output_file):
 
     music_file = get_random_music()
 
