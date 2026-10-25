@@ -148,11 +148,11 @@ def create_slide(
     draw.multiline_text(
         (x,y),
         text,
-        fill="#FFD60A",
         font=font,
-        align="center",
-        stroke_width=6,
-        stroke_fill="black"
+        fill="#FFFFFF",
+        stroke_width=12,
+        stroke_fill="#000000",
+        align="center"
     )
 
     img = img.convert(
