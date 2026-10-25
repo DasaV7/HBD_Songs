@@ -56,7 +56,7 @@ def create_slide(
     overlay = Image.new(
         "RGBA",
         img.size,
-        (0,0,0,200)
+        (0,0,0,240)
     )
 
     img = Image.alpha_composite(
@@ -84,7 +84,7 @@ def create_slide(
 
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
-            200
+            240
         )
 
     except:
@@ -109,24 +109,42 @@ def create_slide(
     ) // 2
 
     # Shadow
-
-    draw.multiline_text(
-        (x+2,y+1),
-        text,
-        fill=(0,0,0),
-        font=font,
-        align="center"
-    )
+    # draw.multiline_text(
+    #     (x,y),
+    #     text,
+    #     fill="#FFD60A",
+    #     font=font,
+    #     align="center",
+    #     stroke_width=6,
+    #     stroke_fill="black"
+    # )
+    # draw.multiline_text(
+    #     (x+2,y+1),
+    #     text,
+    #     fill=(0,0,0),
+    #     font=font,
+    #     align="center"
+    # )
 
     # Main Text
 
+    # draw.multiline_text(
+    #     (x,y),
+    #     text,
+    #     fill=text_color,
+    #     font=font,
+    #     align="center"
+    # )
     draw.multiline_text(
         (x,y),
         text,
-        fill=text_color,
+        fill="#FFD60A",
         font=font,
-        align="center"
+        align="center",
+        stroke_width=6,
+        stroke_fill="black"
     )
+    
 
     img = img.convert(
         "RGB"
