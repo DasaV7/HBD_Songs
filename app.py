@@ -13,7 +13,9 @@ from services.audio_service import (
 from services.video_service import (
     create_video
 )
-
+from services.youtube_service import (
+    upload_video
+)
 # Create generated folder
 
 os.makedirs(
