@@ -1,33 +1,45 @@
-def get_youtube_metadata(
+def get_metadata(
     name,
     message
 ):
 
     title = (
-        f"Happy Birthday {name} | Personalized Birthday Song & Wishes"
+        f"Happy Birthday {name} 🎂 | Personalized Birthday Wishes Song"
     )
 
     description = f"""
-Happy Birthday {name} 🎉
+Happy Birthday {name}!
 
 {message}
 
-Personalized birthday wishes video.
+Celebrate a special birthday with beautiful wishes and music.
 
-#happybirthday
-#{name.lower()}
-#birthdaysong
-#birthdaywishes
-#kidsbirthday
+🎂 Personalized Birthday Video
+🎉 Birthday Celebration
+🎈 Birthday Music
+
+#HappyBirthday
+#{name}
+#BirthdaySong
+#BirthdayWishes
+#KidsBirthday
+#BirthdayCelebration
 """
 
     tags = [
+
         "happy birthday",
+
         f"happy birthday {name}",
-        "birthday song",
+
         "birthday wishes",
+
+        "birthday song",
+
         "kids birthday",
+
         "birthday celebration",
+
         name
     ]
 
