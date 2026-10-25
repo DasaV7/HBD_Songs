@@ -80,13 +80,13 @@ def create_slide(
         COLORS
     )
 
-    try:
-        font = ImageFont.truetype(
-            "DejaVuSans-Bold.ttf",
-            240
-        )
-    except:
-        font = ImageFont.load_default()
+    # try:
+    #     font = ImageFont.truetype(
+    #         "DejaVuSans-Bold.ttf",
+    #         240
+    #     )
+    # except:
+    #     font = ImageFont.load_default()
 
     max_width = 1100
     
