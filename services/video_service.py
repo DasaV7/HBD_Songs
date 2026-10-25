@@ -81,14 +81,11 @@ def create_slide(
     )
 
     try:
-
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
             240
         )
-
     except:
-
         font = ImageFont.load_default()
 
     bbox = draw.multiline_textbbox(
@@ -154,12 +151,14 @@ def create_slide(
         output_file
     )
 
-    return (
+    clip = (
         ImageClip(output_file)
         .set_duration(duration)
         .fadein(1)
         .fadeout(1)
     )
+    
+    return clip
 
 
 def create_video(
