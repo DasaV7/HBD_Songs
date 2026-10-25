@@ -56,7 +56,7 @@ def create_slide(
     overlay = Image.new(
         "RGBA",
         img.size,
-        (0,0,0,240)
+        (0,0,0,120)
     )
 
     img = Image.alpha_composite(
