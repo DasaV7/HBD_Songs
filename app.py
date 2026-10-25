@@ -137,7 +137,19 @@ if st.button("Generate Video"):
             st.video(
                 video_path
             )
-
+            if st.button(
+                "Upload To YouTube"
+            ):
+            
+                youtube_link = upload_video(
+                    video_path,
+                    f"Happy Birthday {name}",
+                    message
+                )
+            
+                st.success(
+                    youtube_link
+                )
             # Download Button
 
             with open(
