@@ -15,7 +15,7 @@ COLORS = [
     APPLE_PURPLE,
     APPLE_ORANGE,
     APPLE_GREEN
-]
+    ]
 
 import random
 import os
