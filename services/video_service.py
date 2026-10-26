@@ -25,7 +25,6 @@ COLORS = [
     "#FFD60A"   # Yellow
 ]
 
-
 def create_slide(
     text,
     background,
@@ -34,18 +33,18 @@ def create_slide(
 ):
 
     img = Image.open(background)
-    
+
     img = img.convert("RGBA")
-    
+
     img = img.resize(
-        (1280,720),
+        (1280, 720),
         Image.LANCZOS
     )
 
     overlay = Image.new(
         "RGBA",
         img.size,
-        (0,0,0,120)
+        (0, 0, 0, 100)
     )
 
     img = Image.alpha_composite(
@@ -55,139 +54,92 @@ def create_slide(
 
     draw = ImageDraw.Draw(img)
 
-    COLORS = [
-        "#0A84FF",
-        "#64D2FF",
-        "#5E5CE6",
-        "#BF5AF2",
-        "#FF375F",
-        "#30D158",
-        "#FFD60A"
-    ]
+    # start big
+    font_size = 180
 
-    text_color = random.choice(
-        COLORS
-    )
+    while True:
 
-    try:
-        font = ImageFont.truetype(
-            "DejaVuSans-Bold.ttf",
-            320
+        try:
+
+            font = ImageFont.truetype(
+                "DejaVuSans-Bold.ttf",
+                font_size
+            )
+
+        except:
+
+            font = ImageFont.load_default()
+            break
+
+        bbox = draw.multiline_textbbox(
+            (0, 0),
+            text.upper(),
+            font=font
         )
-    except:
-        font = ImageFont.load_default()
 
-    # max_width = 1100
-    
-    # while True:
-    
-    #     bbox = draw.multiline_textbbox(
-    #         (0, 0),
-    #         text,
-    #         font=font
-    #     )
-    
-    #     text_width = bbox[2] - bbox[0]
-    
-    #     if text_width <= max_width:
-    #         break
-    
-    #     font = ImageFont.truetype(
-    #         "DejaVuSans-Bold.ttf",
-    #         font.size - 10
-    #     )
+        text_width = bbox[2] - bbox[0]
+
+        # make text fit screen
+        if text_width < 1000:
+            break
+
+        font_size -= 10
+
+        if font_size < 60:
+            break
+
     bbox = draw.multiline_textbbox(
-        (0,0),
-        text,
+        (0, 0),
+        text.upper(),
         font=font
     )
 
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
-    
-    # text_height = bbox[3] - bbox[1]
 
-    x = (
-        1280 - text_width
-    ) // 2
-    
-    y = 420
-    
-    # y = (
-    #     720 - text_height
-    # ) // 2
+    x = (1280 - text_width) // 2
 
-    # Shadow
-    # draw.multiline_text(
-    #     (x,y),
-    #     text,
-    #     fill="#FFD60A",
-    #     font=font,
-    #     align="center",
-    #     stroke_width=6,
-    #     stroke_fill="black"
-    # )
-    # draw.multiline_text(
-    #     (x+2,y+1),
-    #     text,
-    #     fill=(0,0,0),
-    #     font=font,
-    #     align="center"
-    # )
+    y = (720 - text_height) // 2
 
-    # Main Text
-
-    # draw.multiline_text(
-    #     (x,y),
-    #     text,
-    #     fill=text_color,
-    #     font=font,
-    #     align="center"
-    # )
     draw.multiline_text(
-        (x,y),
-        text,
+        (x, y),
+        text.upper(),
         font=font,
-        fill="#FFFFFF",
-        stroke_width=12,
-        stroke_fill="#000000",
+        fill="white",
+        stroke_width=8,
+        stroke_fill="black",
         align="center"
     )
 
-    img = img.convert(
-        "RGB"
-    )
-
     try:
+
         confetti = Image.open(
             "assets/overlays/confetti.png"
         )
-    
+
         confetti = confetti.resize(
-            (1280,720)
+            (1280, 720)
         )
-    
+
         img.paste(
             confetti,
-            (0,0),
+            (0, 0),
             confetti
         )
-    
+
     except:
         pass
-        
-    img.save(
-        output_file
-    )
 
-    clip = (
+    img = img.convert("RGB")
+
+    img.save(output_file)
+
+    return (
         ImageClip(output_file)
         .set_duration(duration)
         .fadein(1)
         .fadeout(1)
     )
-    
-    return clip
 
 
 def create_video(
