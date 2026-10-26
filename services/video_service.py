@@ -61,7 +61,7 @@ def create_slide(
 
     font = ImageFont.truetype(
         "assets/fonts/Montserrat-Black.ttf",
-        180
+        100
     )
 
     # Fixed position instead of bbox calculations
