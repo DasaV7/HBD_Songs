@@ -63,7 +63,7 @@ def create_slide(
         "assets/fonts/Montserrat-Bold.ttf",
         180
     )
-
+    print(font)
     # Fixed position instead of bbox calculations
 
     draw.multiline_text(
