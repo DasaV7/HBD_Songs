@@ -59,17 +59,18 @@ def create_slide(
 
     while True:
 
-        try:
-
-            font = ImageFont.truetype(
-                "DejaVuSans-Bold.ttf",
-                font_size
-            )
-
-        except:
-
-            font = ImageFont.load_default()
-            break
+    try:
+    
+        font = ImageFont.truetype(
+            "assets/fonts/Montserrat-Bold.ttf",
+            220
+        )
+    
+    except Exception as e:
+    
+        print("FONT ERROR:", e)
+    
+        font = ImageFont.load_default()
 
         bbox = draw.multiline_textbbox(
             (0, 0),
