@@ -69,37 +69,41 @@ def create_slide(
         COLORS
     )
 
-    font = ImageFont.truetype(
-        "DejaVuSans-Bold.ttf",
-        320
-    )
-    # try:
-    #     font = ImageFont.truetype(
-    #         "DejaVuSans-Bold.ttf",
-    #         320
-    #     )
-    # except:
-    #     font = ImageFont.load_default()
-
-    max_width = 1100
-    
-    while True:
-    
-        bbox = draw.multiline_textbbox(
-            (0, 0),
-            text,
-            font=font
-        )
-    
-        text_width = bbox[2] - bbox[0]
-    
-        if text_width <= max_width:
-            break
-    
+    try:
         font = ImageFont.truetype(
             "DejaVuSans-Bold.ttf",
-            font.size - 10
+            320
         )
+    except:
+        font = ImageFont.load_default()
+
+    # max_width = 1100
+    
+    # while True:
+    
+    #     bbox = draw.multiline_textbbox(
+    #         (0, 0),
+    #         text,
+    #         font=font
+    #     )
+    
+    #     text_width = bbox[2] - bbox[0]
+    
+    #     if text_width <= max_width:
+    #         break
+    
+    #     font = ImageFont.truetype(
+    #         "DejaVuSans-Bold.ttf",
+    #         font.size - 10
+    #     )
+    bbox = draw.multiline_textbbox(
+    (0,0),
+    text,
+    font=font
+)
+
+text_width = bbox[2] - bbox[0]
+text_height = bbox[3] - bbox[1]
     
     text_height = bbox[3] - bbox[1]
 
