@@ -86,7 +86,7 @@ def create_slide(
     #     spacing=25
     # )
     draw.multiline_text(
-    (x, y),
+    (80, 220),
     text,
     font=font,
     fill=random.choice(COLORS),
