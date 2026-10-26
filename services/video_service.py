@@ -110,10 +110,12 @@ def create_slide(
     x = (
         1280 - text_width
     ) // 2
-
-    y = (
-        720 - text_height
-    ) // 2
+    
+    y = 420
+    
+    # y = (
+    #     720 - text_height
+    # ) // 2
 
     # Shadow
     # draw.multiline_text(
