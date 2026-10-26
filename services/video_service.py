@@ -14,15 +14,24 @@ import random
 import os
 
 
-# Apple-inspired colors
+# # Apple-inspired colors
+# COLORS = [
+#     "#0A84FF",  # Blue
+#     "#64D2FF",  # Cyan
+#     "#5E5CE6",  # Indigo
+#     "#BF5AF2",  # Purple
+#     "#FF375F",  # Pink
+#     "#30D158",  # Green
+#     "#FFD60A"   # Yellow
+# ]
 COLORS = [
-    "#0A84FF",  # Blue
-    "#64D2FF",  # Cyan
-    "#5E5CE6",  # Indigo
-    "#BF5AF2",  # Purple
-    "#FF375F",  # Pink
-    "#30D158",  # Green
-    "#FFD60A"   # Yellow
+    "#FF9AA2",  # pastel pink
+    "#FFDAC1",  # peach
+    "#E2F0CB",  # mint
+    "#B5EAD7",  # aqua
+    "#C7CEEA",  # lavender
+    "#A0C4FF",  # sky blue
+    "#FFD6A5"   # soft orange
 ]
 
 def create_slide(
