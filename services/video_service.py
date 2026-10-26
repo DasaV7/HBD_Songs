@@ -60,7 +60,7 @@ def create_slide(
     # assets/fonts/Montserrat-Bold.ttf
 
     font = ImageFont.truetype(
-        "assets/fonts/Montserrat-Bold.ttf",
+        "assets/fonts/Montserrat-Black.ttf",
         180
     )
 
