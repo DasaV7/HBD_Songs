@@ -237,11 +237,19 @@ def create_video(
 
     output = f"generated/{safe_name}.mp4"
 
+    # final_video.write_videofile(
+    #     output,
+    #     fps=24,
+    #     codec="libx264",
+    #     audio_codec="aac"
+    # )
     final_video.write_videofile(
-        output,
-        fps=24,
-        codec="libx264",
-        audio_codec="aac"
+    output,
+    fps=24,
+    codec="libx264",
+    audio_codec="aac",
+    temp_audiofile="generated/temp_audio.m4a",
+    remove_temp=True
     )
 
     return output
