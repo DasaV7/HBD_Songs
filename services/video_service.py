@@ -34,24 +34,13 @@ def create_slide(
 ):
 
     img = Image.open(background)
-
-    img.thumbnail((1280,720))
-
-    canvas = Image.new(
-        "RGB",
+    
+    img = img.convert("RGBA")
+    
+    img = img.resize(
         (1280,720),
-        (0,0,0)
+        Image.LANCZOS
     )
-
-    x_img = (1280 - img.width)//2
-    y_img = (720 - img.height)//2
-
-    canvas.paste(
-        img,
-        (x_img,y_img)
-    )
-
-    img = canvas.convert("RGBA")
 
     overlay = Image.new(
         "RGBA",
