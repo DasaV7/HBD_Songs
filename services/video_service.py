@@ -97,15 +97,15 @@ def create_slide(
     #         font.size - 10
     #     )
     bbox = draw.multiline_textbbox(
-    (0,0),
-    text,
-    font=font
-)
+        (0,0),
+        text,
+        font=font
+    )
 
-text_width = bbox[2] - bbox[0]
-text_height = bbox[3] - bbox[1]
-    
+    text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
+    
+    # text_height = bbox[3] - bbox[1]
 
     x = (
         1280 - text_width
