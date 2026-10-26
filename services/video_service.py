@@ -76,15 +76,22 @@ def create_slide(
 
     # Fixed position instead of bbox calculations
 
+    # draw.multiline_text(
+    #     (80, 220),
+    #     text.upper(),
+    #     font=font,
+    #     fill=(255,255,255),
+    #     stroke_width=8,
+    #     stroke_fill=(0,0,0),
+    #     spacing=25
+    # )
     draw.multiline_text(
-        (80, 220),
-        text.upper(),
-        font=font,
-        fill=(255,255,255),
-        stroke_width=8,
-        stroke_fill=(0,0,0),
-        spacing=25
-    )
+    (x, y),
+    text,
+    font=font,
+    fill=random.choice(COLORS),
+    align="center"
+)
 
     # Confetti overlay
 
