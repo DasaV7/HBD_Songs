@@ -41,10 +41,11 @@ def create_slide(
         Image.LANCZOS
     )
 
+    # Dark overlay
     overlay = Image.new(
         "RGBA",
         img.size,
-        (0, 0, 0, 100)
+        (0, 0, 0, 80)
     )
 
     img = Image.alpha_composite(
@@ -54,63 +55,28 @@ def create_slide(
 
     draw = ImageDraw.Draw(img)
 
-    # start big
-    font_size = 180
+    # IMPORTANT
+    # Verify exact filename:
+    # assets/fonts/Montserrat-Bold.ttf
 
-    while True:
-
-    try:
-    
-        font = ImageFont.truetype(
-            "assets/fonts/Montserrat-Bold.ttf",
-            220
-        )
-    
-    except Exception as e:
-    
-        print("FONT ERROR:", e)
-    
-        font = ImageFont.load_default()
-
-        bbox = draw.multiline_textbbox(
-            (0, 0),
-            text.upper(),
-            font=font
-        )
-
-        text_width = bbox[2] - bbox[0]
-
-        # make text fit screen
-        if text_width < 1000:
-            break
-
-        font_size -= 10
-
-        if font_size < 60:
-            break
-
-    bbox = draw.multiline_textbbox(
-        (0, 0),
-        text.upper(),
-        font=font
+    font = ImageFont.truetype(
+        "assets/fonts/Montserrat-Bold.ttf",
+        180
     )
 
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-
-    x = (1280 - text_width) // 2
-
-    y = (720 - text_height) // 2
+    # Fixed position instead of bbox calculations
 
     draw.multiline_text(
-        (x, y),
+        (80, 220),
         text.upper(),
         font=font,
-        fill="white",
+        fill=(255,255,255),
         stroke_width=8,
-        stroke_fill="black",
-        align="center"
+        stroke_fill=(0,0,0),
+        spacing=25
     )
+
+    # Confetti overlay
 
     try:
 
@@ -118,13 +84,15 @@ def create_slide(
             "assets/overlays/confetti.png"
         )
 
+        confetti = confetti.convert("RGBA")
+
         confetti = confetti.resize(
-            (1280, 720)
+            (1280,720)
         )
 
         img.paste(
             confetti,
-            (0, 0),
+            (0,0),
             confetti
         )
 
@@ -135,12 +103,14 @@ def create_slide(
 
     img.save(output_file)
 
-    return (
+    clip = (
         ImageClip(output_file)
         .set_duration(duration)
         .fadein(1)
         .fadeout(1)
     )
+
+    return clip
 
 
 def create_video(
