@@ -61,7 +61,16 @@ def create_slide(
         img,
         overlay
     )
-
+    draw.rounded_rectangle(
+        (
+            80,
+            180,
+            1200,
+            550
+        ),
+        radius=50,
+        fill=(255,255,255,60)
+    )
     draw = ImageDraw.Draw(img)
 
     # IMPORTANT
