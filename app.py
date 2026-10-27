@@ -38,6 +38,23 @@ st.write(
     "Create beautiful birthday videos with music and slides."
 )
 
+if st.checkbox("Debug Secrets"):
+
+    st.write(
+        "Client ID exists:",
+        "YOUTUBE_CLIENT_ID" in st.secrets
+    )
+
+    st.write(
+        "Client Secret exists:",
+        "YOUTUBE_CLIENT_SECRET" in st.secrets
+    )
+
+    st.write(
+        "Channel ID exists:",
+        "YOUTUBE_CHANNEL_ID" in st.secrets
+    )
+
 # User Inputs
 
 name = st.text_input(
@@ -148,22 +165,6 @@ if st.button("Generate Video"):
                     message
                 )
             
-            if st.checkbox("Debug Secrets"):
-            
-                st.write(
-                    "Client ID exists:",
-                    "YOUTUBE_CLIENT_ID" in st.secrets
-                )
-            
-                st.write(
-                    "Client Secret exists:",
-                    "YOUTUBE_CLIENT_SECRET" in st.secrets
-                )
-            
-                st.write(
-                    "Channel ID exists:",
-                    "YOUTUBE_CHANNEL_ID" in st.secrets
-                )
                 st.success(
                     youtube_link
                 )
