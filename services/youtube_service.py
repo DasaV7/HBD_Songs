@@ -10,10 +10,11 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
 
 def get_youtube_service():
-    """Build an authenticated YouTube service using refresh token from secrets."""
-    client_id = st.secrets["youtube"]["client_id"]
-    client_secret = st.secrets["youtube"]["client_secret"]
-    refresh_token = st.secrets["youtube"]["refresh_token"]
+    """Create authenticated YouTube service using flat secrets."""
+    
+    client_id = st.secrets["YOUTUBE_CLIENT_ID"]
+    client_secret = st.secrets["YOUTUBE_CLIENT_SECRET"]
+    refresh_token = st.secrets["YOUTUBE_REFRESH_TOKEN"]
 
     creds = Credentials(
         token=None,
@@ -24,7 +25,7 @@ def get_youtube_service():
         scopes=SCOPES,
     )
 
-    # Refresh the access token if needed
+    # Refresh access token if needed
     if not creds.valid:
         creds.refresh(Request())
 
@@ -33,19 +34,19 @@ def get_youtube_service():
 
 def upload_video(video_path: str, title: str, description: str = "") -> str:
     """
-    Upload a video to YouTube and return the watch URL.
+    Upload video to YouTube and return the watch URL.
     """
     try:
         youtube = get_youtube_service()
 
         body = {
             "snippet": {
-                "title": title[:100],          # YouTube limit
+                "title": title[:100],
                 "description": description[:5000],
-                "categoryId": "22",            # People & Blogs (good default)
+                "categoryId": "22",  # People & Blogs
             },
             "status": {
-                "privacyStatus": "public",     # or "unlisted" / "private"
+                "privacyStatus": "public",  # change to "unlisted" if you want
                 "selfDeclaredMadeForKids": False,
             },
         }
@@ -54,7 +55,7 @@ def upload_video(video_path: str, title: str, description: str = "") -> str:
             video_path,
             mimetype="video/mp4",
             resumable=True,
-            chunksize=1024 * 1024 * 5,         # 5 MB chunks
+            chunksize=5 * 1024 * 1024,  # 5 MB chunks
         )
 
         request = youtube.videos().insert(
@@ -67,7 +68,6 @@ def upload_video(video_path: str, title: str, description: str = "") -> str:
         while response is None:
             status, response = request.next_chunk()
             if status:
-                # Optional: show progress in Streamlit
                 progress = int(status.progress() * 100)
                 st.write(f"Upload progress: {progress}%")
 
