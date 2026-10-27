@@ -181,7 +181,7 @@ def create_video(
     slides = [
 
         create_slide(
-            f"🎂\nHappy Birthday\n{name}",
+            f"Happy Birthday\n{name}",
             images[0],
             slide_duration,
             "generated/slide1.png"
