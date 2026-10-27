@@ -99,7 +99,8 @@ if "last_video_path" in st.session_state and os.path.exists(st.session_state["la
                 link = upload_video(
                     st.session_state["last_video_path"],
                     st.session_state["last_title"],
-                    st.session_state["last_description"]
+                    st.session_state["last_description"],
+                    name=st.session_state.get("last_name", "")
                 )
                 st.success("✅ Uploaded successfully!")
                 st.markdown(f"**Watch on YouTube:** [Click here]({link})")
