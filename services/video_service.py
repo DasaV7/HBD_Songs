@@ -70,7 +70,8 @@ def create_slide(
 
     font = ImageFont.truetype(
         #"assets/fonts/Montserrat-Black.ttf",
-        "assets/fonts/Montserrat-SemiBold.ttf",
+        #"assets/fonts/Montserrat-SemiBold.ttf",
+        "assets/fonts/Poppins-SemiBold.ttf",
         80
     )
 
@@ -100,7 +101,7 @@ def create_slide(
         550
     ),
     radius=50,
-    fill=(255,255,255,60)
+    #fill=(255,255,255,60)
 )
 
     # Confetti overlay
