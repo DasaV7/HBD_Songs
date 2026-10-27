@@ -10,7 +10,7 @@ from services.youtube_service import upload_video
 # Create generated folder
 os.makedirs("generated", exist_ok=True)
 
-# Streamlit Page Config
+# Page config
 st.set_page_config(
     page_title="Birthday Video Generator",
     page_icon="🎂",
@@ -20,13 +20,14 @@ st.set_page_config(
 st.title("🎂 Birthday Video Generator")
 st.write("Create beautiful birthday videos with music and slides.")
 
-# Debug secrets (optional)
+# Optional debug
 if st.checkbox("Debug Secrets"):
     st.write("Client ID exists:", "YOUTUBE_CLIENT_ID" in st.secrets)
     st.write("Client Secret exists:", "YOUTUBE_CLIENT_SECRET" in st.secrets)
+    st.write("Refresh Token exists:", "YOUTUBE_REFRESH_TOKEN" in st.secrets)
     st.write("Channel ID exists:", "YOUTUBE_CHANNEL_ID" in st.secrets)
 
-# User Inputs
+# User inputs
 name = st.text_input("Birthday Person Name")
 message = st.text_area("Custom Birthday Message")
 
@@ -42,13 +43,13 @@ if st.button("Generate Video"):
 
     with st.spinner("Generating Birthday Video..."):
         try:
-            # 1. Generate lyrics
+            # Generate lyrics
             lyrics = generate_lyrics(name, message)
 
-            # 2. Audio file path
+            # Audio path
             audio_file = f"generated/{name}.mp3"
 
-            # 3. Generate audio
+            # Generate audio
             asyncio.run(generate_audio(lyrics, audio_file))
 
             if not os.path.exists(audio_file):
@@ -57,14 +58,14 @@ if st.button("Generate Video"):
 
             st.success("Music Loaded Successfully")
 
-            # 4. Create video
+            # Create video
             video_path = create_video(name, message, audio_file)
 
             if not os.path.exists(video_path):
                 st.error("Video file was not created.")
                 st.stop()
 
-            # Save to session state so Upload button can use it later
+            # Save important data in session state
             st.session_state["last_video_path"] = video_path
             st.session_state["last_title"] = f"Happy Birthday {name}"
             st.session_state["last_description"] = message
@@ -73,26 +74,25 @@ if st.button("Generate Video"):
             st.success("🎉 Birthday Video Ready!")
 
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            st.error(f"Error while generating video: {str(e)}")
             st.stop()
 
-# ====================== SHOW VIDEO + BUTTONS ======================
-# This part runs on every rerun if a video was already generated
+# ====================== SHOW VIDEO + DOWNLOAD + UPLOAD ======================
 if "last_video_path" in st.session_state and os.path.exists(st.session_state["last_video_path"]):
 
     st.video(st.session_state["last_video_path"])
 
     # Download button
-    with open(st.session_state["last_video_path"], "rb") as video_file:
+    with open(st.session_state["last_video_path"], "rb") as f:
         st.download_button(
             label="⬇️ Download Video",
-            data=video_file,
+            data=f,
             file_name=f"{st.session_state.get('last_name', 'birthday')}.mp4",
             mime="video/mp4",
             key="download_btn"
         )
 
-    # Upload to YouTube button
+    # Upload button
     if st.button("📤 Upload To YouTube", key="upload_btn"):
         with st.spinner("Uploading to YouTube... Please wait"):
             try:
@@ -102,6 +102,6 @@ if "last_video_path" in st.session_state and os.path.exists(st.session_state["la
                     st.session_state["last_description"]
                 )
                 st.success("✅ Uploaded successfully!")
-                st.markdown(f"**Watch here:** [Open on YouTube]({link})")
+                st.markdown(f"**Watch on YouTube:** [Click here]({link})")
             except Exception as e:
                 st.error(f"Upload failed: {e}")
