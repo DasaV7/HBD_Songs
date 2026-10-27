@@ -10,8 +10,7 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
 
 def get_youtube_service():
-    """Create authenticated YouTube service using flat secrets."""
-    
+    """Create authenticated YouTube service using Streamlit secrets."""
     client_id = st.secrets["YOUTUBE_CLIENT_ID"]
     client_secret = st.secrets["YOUTUBE_CLIENT_SECRET"]
     refresh_token = st.secrets["YOUTUBE_REFRESH_TOKEN"]
@@ -25,28 +24,82 @@ def get_youtube_service():
         scopes=SCOPES,
     )
 
-    # Refresh access token if needed
     if not creds.valid:
         creds.refresh(Request())
 
     return build("youtube", "v3", credentials=creds)
 
 
-def upload_video(video_path: str, title: str, description: str = "") -> str:
+def create_description(name: str, custom_message: str = "") -> str:
+    """Generate a professional YouTube description."""
+    
+    description = f"""🎈 Happy Birthday {name}! 🎂
+
+Celebrate in style with this beautiful personalized Happy Birthday video created just for {name}. Featuring elegant décor, balloons, candles, flowers and a joyful birthday atmosphere.
+
+"""
+
+    if custom_message.strip():
+        description += f"💌 Special Message:\n{custom_message}\n\n"
+
+    description += """✨ Perfect for:
+• Birthday parties
+• Home celebrations
+• Event venues
+• TV displays
+• Restaurants & cafés
+• Family gatherings
+• Background décor
+
+This video was specially generated with love using AI.
+
+If you enjoy this video, please Like 👍, Subscribe 🔔, and turn on the notification bell for more personalized birthday videos!
+
+Thank you for watching and Happy Birthday {name}! 🎉💖
+
+#HappyBirthday #BirthdayVideo #HappyBirthday{name} #BirthdayWish #BirthdayGreeting #PersonalizedBirthday #BirthdayCelebration #PartyDecor #4K #BirthdayDecor #CelebrationVideo #BirthdayParty #ElegantBirthday
+""".format(name=name)
+
+    return description
+
+
+def upload_video(video_path: str, title: str, description: str = "", name: str = "") -> str:
     """
-    Upload video to YouTube and return the watch URL.
+    Upload video to YouTube with professional description and tags.
     """
     try:
         youtube = get_youtube_service()
 
+        # Use the beautiful description template
+        final_description = create_description(name or "Friend", description)
+
+        # Clean title (YouTube limit is 100 characters)
+        final_title = title[:100]
+
         body = {
             "snippet": {
-                "title": title[:100],
-                "description": description[:5000],
+                "title": final_title,
+                "description": final_description,
+                "tags": [
+                    "Happy Birthday",
+                    "Birthday Video",
+                    f"Happy Birthday {name}" if name else "Happy Birthday",
+                    "Birthday Wish",
+                    "Birthday Greeting",
+                    "Personalized Birthday",
+                    "Birthday Celebration",
+                    "Party Decor",
+                    "4K",
+                    "Birthday Decor",
+                    "Celebration Video",
+                    "Birthday Party",
+                    "Elegant Birthday",
+                    "Birthday Song"
+                ],
                 "categoryId": "22",  # People & Blogs
             },
             "status": {
-                "privacyStatus": "public",  # change to "unlisted" if you want
+                "privacyStatus": "public",          # Change to "unlisted" if you want
                 "selfDeclaredMadeForKids": False,
             },
         }
