@@ -86,12 +86,19 @@ def create_slide(
     #     stroke_fill=(0,0,0),
     #     spacing=25
     # )
+#     draw.multiline_text(
+#     (80, 220),
+#     text,
+#     font=font,
+#     fill=random.choice(COLORS),
+#     align="center"
+# )
     draw.multiline_text(
-    (80, 220),
+    (120,250),
     text,
     font=font,
     fill=random.choice(COLORS),
-    align="center"
+    spacing=20
 )
     draw.rounded_rectangle(
     (
