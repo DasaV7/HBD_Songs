@@ -148,42 +148,36 @@ if st.button("Generate Video"):
 
                 st.stop()
 
-            st.success(
-                "🎉 Birthday Video Ready!"
-            )
-
-            st.video(
-                video_path
-            )
-            if st.button(
-                "Upload To YouTube"
-            ):
+            st.success("🎉 Birthday Video Ready!")
+            st.video(video_path)
             
-                youtube_link = upload_video(
-                    video_path,
-                    f"Happy Birthday {name}",
-                    message
-                )
+            # Store the path so the upload button can find it later
+            st.session_state["last_video_path"] = video_path
+            st.session_state["last_title"] = f"Happy Birthday {name}"
+            st.session_state["last_description"] = message
             
-                st.success(
-                    youtube_link
-                )
-            # Download Button
-
-            with open(
-                video_path,
-                "rb"
-            ) as video_file:
-
+            # Download button
+            with open(video_path, "rb") as video_file:
                 st.download_button(
                     label="⬇️ Download Video",
                     data=video_file,
                     file_name=f"{name}.mp4",
-                    mime="video/mp4"
+                    mime="video/mp4",
                 )
-
-        except Exception as e:
-
-            st.error(
-                f"Error: {str(e)}"
-            )
+            
+            # Separate Upload button (outside the generate button)
+            if st.button("📤 Upload To YouTube", key="upload_btn"):
+                if "last_video_path" not in st.session_state:
+                    st.error("Please generate a video first.")
+                else:
+                    with st.spinner("Uploading to YouTube..."):
+                        try:
+                            link = upload_video(
+                                st.session_state["last_video_path"],
+                                st.session_state["last_title"],
+                                st.session_state["last_description"],
+                            )
+                            st.success("Uploaded successfully!")
+                            st.markdown(f"[Watch on YouTube]({link})")
+                        except Exception as e:
+                            st.error(f"Upload failed: {e}")
