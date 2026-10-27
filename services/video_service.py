@@ -1,261 +1,133 @@
-# services/video_service.py
-
-from moviepy.editor import (
-    ImageClip,
-    AudioFileClip,
-    concatenate_videoclips
-)
-
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
-
-import random
-import os
+import streamlit as st
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from googleapiclient.errors import HttpError
 
 
-# # Apple-inspired colors
-# COLORS = [
-#     "#0A84FF",  # Blue
-#     "#64D2FF",  # Cyan
-#     "#5E5CE6",  # Indigo
-#     "#BF5AF2",  # Purple
-#     "#FF375F",  # Pink
-#     "#30D158",  # Green
-#     "#FFD60A"   # Yellow
-# ]
-COLORS = [
-    "#FF9AA2",  # pastel pink
-    "#FFDAC1",  # peach
-    "#E2F0CB",  # mint
-    "#B5EAD7",  # aqua
-    "#C7CEEA",  # lavender
-    "#A0C4FF",  # sky blue
-    "#FFD6A5"   # soft orange
-]
+SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
-def create_slide(
-    text,
-    background,
-    duration,
-    output_file
-):
 
-    img = Image.open(background)
+def get_youtube_service():
+    """Create authenticated YouTube service using Streamlit secrets."""
+    client_id = st.secrets["YOUTUBE_CLIENT_ID"]
+    client_secret = st.secrets["YOUTUBE_CLIENT_SECRET"]
+    refresh_token = st.secrets["YOUTUBE_REFRESH_TOKEN"]
 
-    img = img.convert("RGBA")
-
-    img = img.resize(
-        (1280, 720),
-        Image.LANCZOS
+    creds = Credentials(
+        token=None,
+        refresh_token=refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=client_id,
+        client_secret=client_secret,
+        scopes=SCOPES,
     )
 
-    # Dark overlay
-    overlay = Image.new(
-        "RGBA",
-        img.size,
-        (0, 0, 0, 80)
-    )
+    if not creds.valid:
+        creds.refresh(Request())
 
-    img = Image.alpha_composite(
-        img,
-        overlay
-    )
+    return build("youtube", "v3", credentials=creds)
 
-    draw = ImageDraw.Draw(img)
 
-    # IMPORTANT
-    # Verify exact filename:
-    # assets/fonts/Montserrat-Bold.ttf
+def create_description(name: str, custom_message: str = "") -> str:
+    """Generate a professional YouTube description."""
+    
+    description = f"""🎈 Happy Birthday {name}! 🎂
 
-    font = ImageFont.truetype(
-        #"assets/fonts/Montserrat-Black.ttf",
-        #"assets/fonts/Montserrat-SemiBold.ttf",
-        "assets/fonts/Poppins-SemiBold.ttf",
-        80
-    )
+Celebrate in style with this beautiful personalized Happy Birthday video created just for {name}. Featuring elegant décor, balloons, candles, flowers and a joyful birthday atmosphere.
 
-    # Fixed position instead of bbox calculations
+"""
 
-    # draw.multiline_text(
-    #     (80, 220),
-    #     text.upper(),
-    #     font=font,
-    #     fill=(255,255,255),
-    #     stroke_width=8,
-    #     stroke_fill=(0,0,0),
-    #     spacing=25
-    # )
-#     draw.multiline_text(
-#     (80, 220),
-#     text,
-#     font=font,
-#     fill=random.choice(COLORS),
-#     align="center"
-# )
-    draw.multiline_text(
-    (120,250),
-    text,
-    font=font,
-    fill=random.choice(COLORS),
-    spacing=20
-)
-    draw.rounded_rectangle(
-    (
-        80,
-        180,
-        1200,
-        550
-    ),
-    radius=50,
-    #fill=(255,255,255,60)
-)
+    if custom_message.strip():
+        description += f"💌 Special Message:\n{custom_message}\n\n"
 
-    # Confetti overlay
+    description += """✨ Perfect for:
+• Birthday parties
+• Home celebrations
+• Event venues
+• TV displays
+• Restaurants & cafés
+• Family gatherings
+• Background décor
 
+This video was specially generated with love using AI.
+
+If you enjoy this video, please Like 👍, Subscribe 🔔, and turn on the notification bell for more personalized birthday videos!
+
+Thank you for watching and Happy Birthday {name}! 🎉💖
+
+#HappyBirthday #BirthdayVideo #HappyBirthday{name} #BirthdayWish #BirthdayGreeting #PersonalizedBirthday #BirthdayCelebration #PartyDecor #4K #BirthdayDecor #CelebrationVideo #BirthdayParty #ElegantBirthday
+""".format(name=name)
+
+    return description
+
+
+def upload_video(video_path: str, title: str, description: str = "", name: str = "") -> str:
+    """
+    Upload video to YouTube with professional description and tags.
+    """
     try:
+        youtube = get_youtube_service()
 
-        confetti = Image.open(
-            "assets/overlays/confetti.png"
+        # Use the beautiful description template
+        final_description = create_description(name or "Friend", description)
+
+        # Clean title (YouTube limit is 100 characters)
+        final_title = title[:100]
+
+        body = {
+            "snippet": {
+                "title": final_title,
+                "description": final_description,
+                "tags": [
+                    "Happy Birthday",
+                    "Birthday Video",
+                    f"Happy Birthday {name}" if name else "Happy Birthday",
+                    "Birthday Wish",
+                    "Birthday Greeting",
+                    "Personalized Birthday",
+                    "Birthday Celebration",
+                    "Party Decor",
+                    "4K",
+                    "Birthday Decor",
+                    "Celebration Video",
+                    "Birthday Party",
+                    "Elegant Birthday",
+                    "Birthday Song"
+                ],
+                "categoryId": "22",  # People & Blogs
+            },
+            "status": {
+                "privacyStatus": "public",          # Change to "unlisted" if you want
+                "selfDeclaredMadeForKids": False,
+            },
+        }
+
+        media = MediaFileUpload(
+            video_path,
+            mimetype="video/mp4",
+            resumable=True,
+            chunksize=5 * 1024 * 1024,  # 5 MB chunks
         )
 
-        confetti = confetti.convert("RGBA")
-
-        confetti = confetti.resize(
-            (1280,720)
+        request = youtube.videos().insert(
+            part="snippet,status",
+            body=body,
+            media_body=media,
         )
 
-        img.paste(
-            confetti,
-            (0,0),
-            confetti
-        )
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                progress = int(status.progress() * 100)
+                st.write(f"Upload progress: {progress}%")
 
-    except:
-        pass
+        video_id = response["id"]
+        return f"https://www.youtube.com/watch?v={video_id}"
 
-    img = img.convert("RGB")
-
-    img.save(output_file)
-
-    clip = (
-        ImageClip(output_file)
-        .set_duration(duration)
-        .fadein(1)
-        .fadeout(1)
-    )
-
-    return clip
-
-
-def create_video(
-    name,
-    message,
-    audio_file
-):
-
-    audio = AudioFileClip(audio_file)
-
-    duration = audio.duration
-
-    slide_duration = duration / 5
-
-    images = [
-        os.path.join(
-            "assets/backgrounds",
-            f
-        )
-        for f in os.listdir(
-            "assets/backgrounds"
-        )
-        if f.lower().endswith(
-            (
-                ".jpg",
-                ".jpeg",
-                ".png"
-            )
-        )
-    ]
-
-    if len(images) < 5:
-
-        raise Exception(
-            f"Need at least 5 images in assets/backgrounds. Found {len(images)}"
-        )
-
-    random.shuffle(images)
-
-    slides = [
-
-        create_slide(
-            f"Happy Birthday\n{name}",
-            images[0],
-            slide_duration,
-            "generated/slide1.png"
-        ),
-
-        create_slide(
-            "Wishing You\nJoy & Happiness",
-            images[1],
-            slide_duration,
-            "generated/slide2.png"
-        ),
-
-        create_slide(
-            message,
-            images[2],
-            slide_duration,
-            "generated/slide3.png"
-        ),
-
-        create_slide(
-            "Celebrate\nYour Special Day!",
-            images[3],
-            slide_duration,
-            "generated/slide4.png"
-        ),
-
-        create_slide(
-            f"Thank You\n{name}",
-            images[4],
-            slide_duration,
-            "generated/slide5.png"
-        )
-
-    ]
-
-    final_video = concatenate_videoclips(
-        slides,
-        method="compose"
-    )
-
-    final_video = final_video.set_audio(audio)
-
-    safe_name = "".join(
-        c for c in name
-        if c.isalnum() or c in (" ", "_", "-")
-    )
-
-    safe_name = safe_name.replace(
-        " ",
-        "_"
-    )
-
-    output = f"generated/{safe_name}.mp4"
-
-    # final_video.write_videofile(
-    #     output,
-    #     fps=24,
-    #     codec="libx264",
-    #     audio_codec="aac"
-    # )
-    final_video.write_videofile(
-    output,
-    fps=24,
-    codec="libx264",
-    audio_codec="aac",
-    temp_audiofile="generated/temp_audio.m4a",
-    remove_temp=True
-    )
-
-    return output
+    except HttpError as e:
+        raise Exception(f"YouTube API error: {e}")
+    except Exception as e:
+        raise Exception(f"Upload failed: {str(e)}")
