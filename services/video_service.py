@@ -141,9 +141,6 @@ def create_slide(
     clip = (
         ImageClip(output_file)
         .set_duration(duration)
-        .resize(
-            lambda t: 1 + 0.01 * t
-        )
         .fadein(1)
         .fadeout(1)
     )
