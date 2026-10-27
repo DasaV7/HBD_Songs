@@ -1,6 +1,7 @@
 import streamlit as st
 import asyncio
 import os
+import streamlit as st
 
 from services.lyrics_service import (
     generate_lyrics
@@ -147,6 +148,22 @@ if st.button("Generate Video"):
                     message
                 )
             
+            if st.checkbox("Debug Secrets"):
+            
+                st.write(
+                    "Client ID exists:",
+                    "YOUTUBE_CLIENT_ID" in st.secrets
+                )
+            
+                st.write(
+                    "Client Secret exists:",
+                    "YOUTUBE_CLIENT_SECRET" in st.secrets
+                )
+            
+                st.write(
+                    "Channel ID exists:",
+                    "YOUTUBE_CHANNEL_ID" in st.secrets
+                )
                 st.success(
                     youtube_link
                 )
