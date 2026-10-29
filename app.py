@@ -59,7 +59,14 @@ if st.button("Generate Video"):
             st.success("Music Loaded Successfully")
 
             # Create video
-            video_path = create_video(name, message, audio_file)
+            #video_path = create_video(name, message, audio_file)
+            video_path, used_files = create_video(name, message, audio_file)
+
+            # Show selected files
+            st.markdown("### 📁 Files used in this video:")
+            st.write(f"**Music:** `{used_files['audio']}`")
+            st.write(f"**Images:** {', '.join(used_files['images']) if used_files['images'] else 'None'}")
+            st.write(f"**Videos:** {', '.join(used_files['videos']) if used_files['videos'] else 'None'}")
 
             if not os.path.exists(video_path):
                 st.error("Video file was not created.")
