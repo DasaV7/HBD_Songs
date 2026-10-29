@@ -59,55 +59,24 @@ def remove_background(overlay_path):
     return Image.fromarray(arr)
 
 
-def create_slide(text, background, duration, output_file, overlays_folder="assets/overlays"):
-    # Base background
+def create_slide(text, background, duration, output_file):
+    # Base image
     img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    # Darken background slightly for better text contrast
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 100))
+    # Soft dark overlay for better text readability
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 110))
     img = Image.alpha_composite(img, dark)
 
     draw = ImageDraw.Draw(img)
 
+    # Font
     try:
-        font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 68)
+        font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 70)
     except:
         font = ImageFont.load_default()
 
-    # ========== SAFE OVERLAY PLACEMENT ==========
-    overlay_files = get_media_files(overlays_folder, (".jpg", ".jpeg", ".png"))
-
-    if overlay_files:
-        selected = random.sample(overlay_files, k=min(2, len(overlay_files)))
-
-        # Safe zones (completely away from center text)
-        safe_positions = [
-            (20, 20),                             # top-left
-            (1280 - 320, 20),                     # top-right
-            (20, 720 - 280),                      # bottom-left
-            (1280 - 320, 720 - 280),              # bottom-right
-        ]
-
-        random.shuffle(safe_positions)
-
-        for i, overlay_path in enumerate(selected):
-            try:
-                ov = remove_background(overlay_path)
-
-                # Resize to reasonable size
-                ov.thumbnail((300, 300), Image.LANCZOS)
-
-                # Use safe position
-                pos = safe_positions[i % len(safe_positions)]
-
-                img.paste(ov, pos, ov)
-
-            except Exception as e:
-                print(f"Overlay error: {e}")
-                continue
-
-    # ========== TEXT ON TOP (always readable) ==========
+    # Main text
     draw.multiline_text(
         (70, 230),
         text,
@@ -117,17 +86,17 @@ def create_slide(text, background, duration, output_file, overlays_folder="asset
         align="center"
     )
 
-    # Frame
+    # Elegant thin frame
     draw.rounded_rectangle(
-        (40, 150, 1240, 570),
-        radius=30,
+        (50, 160, 1230, 560),
+        radius=35,
         outline=(255, 255, 255, 160),
         width=3
     )
 
-    # Save
-    final = img.convert("RGB")
-    final.save(output_file, quality=95)
+    # Convert and save
+    img = img.convert("RGB")
+    img.save(output_file, quality=95)
 
     return (ImageClip(output_file)
             .set_duration(duration)
