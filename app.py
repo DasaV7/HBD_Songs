@@ -40,7 +40,7 @@ names_input = st.text_area(
     placeholder="Vikram\nSai\nAbhinav\nPriya\nRahul\nAnanya"
 )
 
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 
 with col1:
     max_videos = st.selectbox("How many videos?", [5, 10], index=0)
@@ -52,11 +52,7 @@ with col2:
         index=0
     )
 
-with col3:
-    default_message = st.text_input(
-        "Default Message",
-        value="Wishing you happiness, joy and success!"
-    )
+st.info("Message format that will be used: **Happy Birthday {name}!**")
 
 # ====================== CONTROL BUTTONS ======================
 col_a, col_b, col_c = st.columns(3)
@@ -111,6 +107,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         st.rerun()
 
     current_name = names[idx]
+    personalized_message = f"Happy Birthday {current_name}!"
 
     st.markdown(f"### Processing {idx + 1} of {len(names)}: `{current_name}`")
     st.progress(idx / len(names))
@@ -127,12 +124,12 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         # Generate video
         status.info(f"🔄 Generating video for **{current_name}**...")
 
-        lyrics = generate_lyrics(current_name, default_message)
+        lyrics = generate_lyrics(current_name, personalized_message)
         audio_file = f"generated/{current_name}.mp3"
         asyncio.run(generate_audio(lyrics, audio_file))
         time.sleep(0.3)
 
-        video_path, used_files = create_video(current_name, default_message, audio_file)
+        video_path, used_files = create_video(current_name, personalized_message, audio_file)
 
         # Upload only if enabled
         link = None
@@ -142,7 +139,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                 link = upload_video(
                     video_path,
                     f"Happy Birthday {current_name}",
-                    default_message,
+                    personalized_message,
                     name=current_name
                 )
                 upload_status = "✅ Uploaded successfully"
