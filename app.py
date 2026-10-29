@@ -53,13 +53,12 @@ if st.button("Generate Video"):
             #asyncio.run(generate_audio(lyrics, audio_file))
 
             asyncio.run(generate_audio(lyrics, audio_file))
-            
-            # Temporary fix - wait and verify
+            # Extra verification
             import time
-            time.sleep(1)
+            time.sleep(0.5)
             
-            if not os.path.exists(audio_file) or os.path.getsize(audio_file) < 1000:
-                st.error("Audio file is invalid or too small. Trying again...")
+            if not os.path.exists(audio_file) or os.path.getsize(audio_file) < 10000:
+                st.warning("Audio file issue detected, retrying...")
                 asyncio.run(generate_audio(lyrics, audio_file))
 
             if not os.path.exists(audio_file):
