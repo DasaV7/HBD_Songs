@@ -32,109 +32,107 @@ def get_media_files(folder, extensions):
     ]
 
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
+import random
+import os
 
 
-def make_transparent(overlay_path, threshold=240):
+def remove_background(overlay_path):
     """
-    Convert JPG overlay to transparent PNG by removing light/white background.
+    Better background removal for both white and black backgrounds.
     """
     img = Image.open(overlay_path).convert("RGBA")
-    datas = img.getdata()
+    arr = np.array(img)
 
-    new_data = []
-    for item in datas:
-        # If pixel is very light (near white), make it transparent
-        if item[0] > threshold and item[1] > threshold and item[2] > threshold:
-            new_data.append((255, 255, 255, 0))
-        else:
-            new_data.append(item)
+    r, g, b, a = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2], arr[:, :, 3]
 
-    img.putdata(new_data)
-    return img
+    # Detect near-white pixels
+    white_mask = (r > 230) & (g > 230) & (b > 230)
+
+    # Detect near-black pixels
+    black_mask = (r < 40) & (g < 40) & (b < 40)
+
+    # Make both transparent
+    arr[:, :, 3] = np.where(white_mask | black_mask, 0, a)
+
+    return Image.fromarray(arr)
 
 
 def create_slide(text, background, duration, output_file, overlays_folder="assets/overlays"):
-    # Base image
+    # Base background
     img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    # Dark overlay for better text readability
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 110))
+    # Darken background slightly for better text contrast
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 100))
     img = Image.alpha_composite(img, dark)
 
     draw = ImageDraw.Draw(img)
 
-    # Load font
     try:
         font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 68)
     except:
         font = ImageFont.load_default()
 
-    # ========== ADD RANDOM OVERLAYS ==========
+    # ========== SAFE OVERLAY PLACEMENT ==========
     overlay_files = get_media_files(overlays_folder, (".jpg", ".jpeg", ".png"))
 
     if overlay_files:
-        # Pick 1 or 2 random overlays
         selected = random.sample(overlay_files, k=min(2, len(overlay_files)))
 
-        for overlay_path in selected:
+        # Safe zones (completely away from center text)
+        safe_positions = [
+            (20, 20),                             # top-left
+            (1280 - 320, 20),                     # top-right
+            (20, 720 - 280),                      # bottom-left
+            (1280 - 320, 720 - 280),              # bottom-right
+        ]
+
+        random.shuffle(safe_positions)
+
+        for i, overlay_path in enumerate(selected):
             try:
-                # Make transparent
-                ov = make_transparent(overlay_path, threshold=235)
+                ov = remove_background(overlay_path)
 
-                # Resize overlay (keep it reasonable size)
-                max_size = random.randint(280, 420)
-                ov.thumbnail((max_size, max_size), Image.LANCZOS)
+                # Resize to reasonable size
+                ov.thumbnail((300, 300), Image.LANCZOS)
 
-                # Random position - avoid center text area
-                # Text is roughly in the middle, so place overlays on sides or corners
-                positions = [
-                    (30, 30),                           # top-left
-                    (1280 - ov.width - 30, 30),         # top-right
-                    (30, 720 - ov.height - 30),         # bottom-left
-                    (1280 - ov.width - 30, 720 - ov.height - 30),  # bottom-right
-                    (30, 300),                          # mid-left
-                    (1280 - ov.width - 30, 300),        # mid-right
-                ]
+                # Use safe position
+                pos = safe_positions[i % len(safe_positions)]
 
-                pos = random.choice(positions)
-
-                # Paste with transparency
                 img.paste(ov, pos, ov)
 
             except Exception as e:
-                print(f"Overlay failed: {e}")
+                print(f"Overlay error: {e}")
                 continue
 
-    # ========== DRAW TEXT (on top of everything) ==========
+    # ========== TEXT ON TOP (always readable) ==========
     draw.multiline_text(
-        (70, 220),
+        (70, 230),
         text,
         font=font,
         fill=random.choice(COLORS),
-        spacing=15,
+        spacing=16,
         align="center"
     )
 
-    # Decorative frame
+    # Frame
     draw.rounded_rectangle(
-        (40, 140, 1240, 580),
+        (40, 150, 1240, 570),
         radius=30,
-        outline=(255, 255, 255, 150),
+        outline=(255, 255, 255, 160),
         width=3
     )
 
-    # Convert and save
-    img = img.convert("RGB")
-    img.save(output_file, quality=95)
+    # Save
+    final = img.convert("RGB")
+    final.save(output_file, quality=95)
 
     return (ImageClip(output_file)
             .set_duration(duration)
             .fadein(1.0)
             .fadeout(1.0))
-
 
 def create_video(name: str, message: str, audio_file: str):
     # Clean old temp slides
