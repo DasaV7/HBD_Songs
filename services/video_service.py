@@ -1,3 +1,8 @@
+# Fix for newer Pillow versions
+from PIL import Image
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.LANCZOS
+
 def create_video(name: str, message: str, audio_file: str):
     audio = AudioFileClip(audio_file)
     total_duration = audio.duration
