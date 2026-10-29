@@ -61,11 +61,13 @@ if st.button("Generate Video"):
             # Create video
             #video_path = create_video(name, message, audio_file)
             video_path, used_files = create_video(name, message, audio_file)
-
-            # Show selected files
+            
+            st.success("🎉 Birthday Video Ready!")
+            st.video(video_path)          # This should now play properly
+            
             st.markdown("### 📁 Files used in this video:")
             st.write(f"**Music:** `{used_files['audio']}`")
-            st.write(f"**Images:** {', '.join(used_files['images']) if used_files['images'] else 'None'}")
+            st.write(f"**Images:** {', '.join(used_files['images'])}")
             st.write(f"**Videos:** {', '.join(used_files['videos']) if used_files['videos'] else 'None'}")
 
             if not os.path.exists(video_path):
