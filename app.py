@@ -8,7 +8,6 @@ from services.audio_service import generate_audio
 from services.video_service import create_video
 from services.youtube_service import upload_video
 
-# Create folder
 os.makedirs("generated", exist_ok=True)
 
 st.set_page_config(
@@ -41,12 +40,21 @@ names_input = st.text_area(
     placeholder="Vikram\nSai\nAbhinav\nPriya\nRahul\nAnanya"
 )
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
+
 with col1:
-    max_videos = st.selectbox("How many videos to process?", [5, 10], index=0)
+    max_videos = st.selectbox("How many videos?", [5, 10], index=0)
+
 with col2:
+    auto_upload = st.selectbox(
+        "Auto Upload to YouTube",
+        ["Enabled", "Disabled"],
+        index=0
+    )
+
+with col3:
     default_message = st.text_input(
-        "Default Birthday Message",
+        "Default Message",
         value="Wishing you happiness, joy and success!"
     )
 
@@ -60,7 +68,7 @@ with col_b:
     if st.button("🛑 Stop Batch"):
         st.session_state.stop_batch = True
         st.session_state.batch_running = False
-        st.warning("Stopping batch after current video finishes...")
+        st.warning("Stopping batch after current video...")
 
 with col_c:
     if st.button("🗑️ Clear All"):
@@ -87,6 +95,7 @@ if start_btn:
     st.session_state.batch_running = True
     st.session_state.stop_batch = False
     st.session_state.current_video = None
+    st.session_state.auto_upload = (auto_upload == "Enabled")
     st.rerun()
 
 # ====================== BATCH PROCESSING ======================
@@ -97,7 +106,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
 
     if idx >= len(names):
         st.session_state.batch_running = False
-        st.success("🎉 All videos completed successfully!")
+        st.success("🎉 All videos completed!")
         st.balloons()
         st.rerun()
 
@@ -106,16 +115,16 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
     st.markdown(f"### Processing {idx + 1} of {len(names)}: `{current_name}`")
     st.progress(idx / len(names))
 
-    # Show previous video while generating next one
+    # Show previous video while generating
     if st.session_state.current_video and os.path.exists(st.session_state.current_video):
         st.markdown("#### ▶️ Previous Video (still playing)")
         st.video(st.session_state.current_video)
-        st.caption("You can continue watching while the next video is being generated...")
+        st.caption("Keep watching while the next video is generating...")
 
     status = st.empty()
 
     try:
-        # Generate
+        # Generate video
         status.info(f"🔄 Generating video for **{current_name}**...")
 
         lyrics = generate_lyrics(current_name, default_message)
@@ -125,19 +134,22 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
 
         video_path, used_files = create_video(current_name, default_message, audio_file)
 
-        # Upload
-        status.info(f"📤 Uploading **{current_name}** to YouTube...")
-        try:
-            link = upload_video(
-                video_path,
-                f"Happy Birthday {current_name}",
-                default_message,
-                name=current_name
-            )
-            upload_status = "✅ Uploaded successfully"
-        except Exception as e:
-            link = None
-            upload_status = f"❌ Upload failed: {str(e)}"
+        # Upload only if enabled
+        link = None
+        if st.session_state.get("auto_upload", True):
+            status.info(f"📤 Uploading **{current_name}** to YouTube...")
+            try:
+                link = upload_video(
+                    video_path,
+                    f"Happy Birthday {current_name}",
+                    default_message,
+                    name=current_name
+                )
+                upload_status = "✅ Uploaded successfully"
+            except Exception as e:
+                upload_status = f"❌ Upload failed: {str(e)}"
+        else:
+            upload_status = "⏸️ Upload skipped (Auto Upload is Disabled)"
 
         # Save result
         result = {
@@ -151,8 +163,8 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         st.session_state.current_video = video_path
         st.session_state.batch_index += 1
 
-        # New video ready → show it + 10 second countdown
-        status.success(f"✅ New video ready: **{current_name}**")
+        # Show new video + countdown
+        status.success(f"✅ Video ready: **{current_name}**")
         st.video(video_path)
         st.write(upload_status)
 
@@ -160,14 +172,14 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         for sec in range(10, 0, -1):
             if st.session_state.stop_batch:
                 break
-            countdown.warning(f"⏱ Next video in **{sec}** seconds... (Click Stop Batch to cancel)")
+            countdown.warning(f"⏱ Next video in **{sec}** seconds...")
             time.sleep(1)
 
         countdown.empty()
         st.rerun()
 
     except Exception as e:
-        st.error(f"❌ Error processing {current_name}: {e}")
+        st.error(f"❌ Error on {current_name}: {e}")
         st.session_state.batch_running = False
 
 # ====================== RESULTS ======================
