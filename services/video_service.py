@@ -137,6 +137,11 @@ def create_video(name: str, message: str, audio_file: str):
         threads=4,
         logger=None
     )
+    
+    video_path, used_files = create_video(name, message, audio_file)
+
+    st.write("### Debug - Used Files")
+    st.json(used_files)
 
     final_video.close()
     audio.close()
