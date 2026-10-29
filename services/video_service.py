@@ -40,7 +40,6 @@ def create_slide(text, background, duration, output_file):
     except:
         font = ImageFont.load_default()
 
-    # Center-ish text
     draw.multiline_text(
         (100, 240),
         text,
@@ -50,7 +49,6 @@ def create_slide(text, background, duration, output_file):
         align="center"
     )
 
-    # Optional decorative frame
     draw.rounded_rectangle(
         (60, 160, 1220, 560),
         radius=40,
@@ -58,7 +56,7 @@ def create_slide(text, background, duration, output_file):
         width=3
     )
 
-    # Confetti overlay
+    # Keep existing confetti (do not remove)
     try:
         confetti = Image.open("assets/overlays/confetti.png").convert("RGBA")
         confetti = confetti.resize((1280, 720))
@@ -79,7 +77,6 @@ def create_slide(text, background, duration, output_file):
 
 
 def get_media_files(folder, extensions):
-    """Helper to get list of media files"""
     if not os.path.exists(folder):
         return []
     return [
@@ -96,7 +93,6 @@ def create_video(name: str, message: str, audio_file: str):
     # ---------- Collect media ----------
     background_images = get_media_files("assets/backgrounds", (".jpg", ".jpeg", ".png"))
     video_clips_list = get_media_files("assets/videos", (".mp4", ".mov", ".avi", ".mkv"))
-    # You can also put shorts in assets/shorts if you want
     video_clips_list += get_media_files("assets/shorts", (".mp4", ".mov", ".avi", ".mkv"))
 
     if len(background_images) < 3:
@@ -105,12 +101,18 @@ def create_video(name: str, message: str, audio_file: str):
     random.shuffle(background_images)
     random.shuffle(video_clips_list)
 
-    # ---------- Build timeline ----------
-    # We will create a mix of slides + video clips
+    # ---------- Track used files ----------
+    used_files = {
+        "audio": os.path.basename(audio_file),
+        "images": [],
+        "videos": []
+    }
+
     clips = []
     remaining_duration = total_duration
 
     # 1. Opening slide
+    used_files["images"].append(os.path.basename(background_images[0]))
     slide1 = create_slide(
         f"Happy Birthday\n{name}",
         background_images[0],
@@ -120,30 +122,28 @@ def create_video(name: str, message: str, audio_file: str):
     clips.append(slide1)
     remaining_duration -= slide1.duration
 
-    # 2. Insert 1-2 short video clips if available
+    # 2. Insert 1-2 short video clips
     for i, video_path in enumerate(video_clips_list[:2]):
         if remaining_duration < 4:
             break
         try:
             vclip = VideoFileClip(video_path)
-            
-            # Take a random short portion (max 6-8 seconds)
             max_len = min(7, vclip.duration, remaining_duration * 0.25)
             start = 0 if vclip.duration <= max_len else random.uniform(0, vclip.duration - max_len)
-            
+
             vclip = (vclip
                      .subclip(start, start + max_len)
                      .resize(height=720)
                      .fadein(0.6)
                      .fadeout(0.6))
-            
-            # Center the video if needed
+
             if vclip.w < 1280:
                 vclip = vclip.set_position("center")
-                bg = ImageClip(background_images[(i+1) % len(background_images)]).set_duration(vclip.duration).resize((1280,720))
+                bg = ImageClip(background_images[(i+1) % len(background_images)]).set_duration(vclip.duration).resize((1280, 720))
                 vclip = CompositeVideoClip([bg, vclip])
 
             clips.append(vclip)
+            used_files["videos"].append(os.path.basename(video_path))
             remaining_duration -= vclip.duration
         except Exception as e:
             print(f"Skipping video {video_path}: {e}")
@@ -151,6 +151,7 @@ def create_video(name: str, message: str, audio_file: str):
 
     # 3. Message slide
     if remaining_duration > 3:
+        used_files["images"].append(os.path.basename(background_images[1]))
         slide_msg = create_slide(
             message[:60] + ("..." if len(message) > 60 else ""),
             background_images[1],
@@ -163,20 +164,24 @@ def create_video(name: str, message: str, audio_file: str):
     # 4. Another video clip if time left
     if video_clips_list and remaining_duration > 5:
         try:
-            vclip = VideoFileClip(video_clips_list[-1])
+            video_path = video_clips_list[-1]
+            vclip = VideoFileClip(video_path)
             max_len = min(8, vclip.duration, remaining_duration * 0.4)
             start = 0 if vclip.duration <= max_len else random.uniform(0, vclip.duration - max_len)
+
             vclip = (vclip.subclip(start, start + max_len)
                          .resize(height=720)
                          .fadein(0.5)
                          .fadeout(0.5))
             clips.append(vclip)
+            used_files["videos"].append(os.path.basename(video_path))
             remaining_duration -= vclip.duration
         except:
             pass
 
     # 5. Closing slides
     if remaining_duration > 3:
+        used_files["images"].append(os.path.basename(background_images[2]))
         slide_close = create_slide(
             "Celebrate Your\nSpecial Day!",
             background_images[2],
@@ -187,6 +192,7 @@ def create_video(name: str, message: str, audio_file: str):
         remaining_duration -= slide_close.duration
 
     if remaining_duration > 2:
+        used_files["images"].append(os.path.basename(background_images[0]))
         slide_end = create_slide(
             f"Thank You\n{name} 💖",
             background_images[0],
@@ -199,11 +205,9 @@ def create_video(name: str, message: str, audio_file: str):
     final_video = concatenate_videoclips(clips, method="compose")
     final_video = final_video.set_audio(audio)
 
-    # Make sure duration matches audio
     if final_video.duration > audio.duration:
         final_video = final_video.subclip(0, audio.duration)
 
-    # Safe filename
     safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
     output_path = f"generated/{safe_name}.mp4"
 
@@ -218,8 +222,8 @@ def create_video(name: str, message: str, audio_file: str):
         logger=None
     )
 
-    # Cleanup
     final_video.close()
     audio.close()
 
-    return output_path
+    # Return both the video path and the list of used files
+    return output_path, used_files
