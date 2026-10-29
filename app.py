@@ -1,6 +1,7 @@
 import streamlit as st
 import asyncio
 import os
+import time
 
 from services.lyrics_service import generate_lyrics
 from services.audio_service import generate_audio
@@ -32,7 +33,7 @@ name = st.text_input("Birthday Person Name")
 message = st.text_area("Custom Birthday Message")
 
 # ====================== GENERATE VIDEO ======================
-if st.button("Generate Video"):
+if st.button("Generate Video", type="primary"):
 
     if not name.strip():
         st.error("Please enter a birthday name.")
@@ -41,64 +42,69 @@ if st.button("Generate Video"):
     if not message.strip():
         message = "Wishing you happiness, joy and success!"
 
-    with st.spinner("Generating Birthday Video..."):
+    with st.spinner("Generating Birthday Video... Please wait"):
         try:
-            # Generate lyrics
+            # 1. Generate lyrics
             lyrics = generate_lyrics(name, message)
 
-            # Audio path
+            # 2. Audio
             audio_file = f"generated/{name}.mp3"
-
-            # Generate audio
-            #asyncio.run(generate_audio(lyrics, audio_file))
-
             asyncio.run(generate_audio(lyrics, audio_file))
-            # Extra verification
-            import time
-            time.sleep(0.5)
-            
-            if not os.path.exists(audio_file) or os.path.getsize(audio_file) < 10000:
-                st.warning("Audio file issue detected, retrying...")
-                asyncio.run(generate_audio(lyrics, audio_file))
 
-            if not os.path.exists(audio_file):
-                st.error("Audio file was not created.")
+            # Verify audio
+            time.sleep(0.4)
+            if not os.path.exists(audio_file) or os.path.getsize(audio_file) < 10000:
+                st.warning("Audio issue detected, retrying...")
+                asyncio.run(generate_audio(lyrics, audio_file))
+                time.sleep(0.4)
+
+            if not os.path.exists(audio_file) or os.path.getsize(audio_file) < 10000:
+                st.error("Failed to create valid audio file.")
                 st.stop()
 
             st.success("Music Loaded Successfully")
 
-            # Create video
-            #video_path = create_video(name, message, audio_file)
+            # 3. Create video
             video_path, used_files = create_video(name, message, audio_file)
-            
-            st.success("🎉 Birthday Video Ready!")
-            st.video(video_path)          # This should now play properly
-            
-            st.markdown("### 📁 Files used in this video:")
-            st.write(f"**Music:** `{used_files['audio']}`")
-            st.write(f"**Images:** {', '.join(used_files['images'])}")
-            st.write(f"**Videos:** {', '.join(used_files['videos']) if used_files['videos'] else 'None'}")
 
-            if not os.path.exists(video_path):
-                st.error("Video file was not created.")
+            if not os.path.exists(video_path) or os.path.getsize(video_path) < 100000:
+                st.error("Video file was not created properly.")
                 st.stop()
 
-            # Save important data in session state
+            # Save to session state
             st.session_state["last_video_path"] = video_path
             st.session_state["last_title"] = f"Happy Birthday {name}"
             st.session_state["last_description"] = message
             st.session_state["last_name"] = name
+            st.session_state["used_files"] = used_files
 
             st.success("🎉 Birthday Video Ready!")
+            st.balloons()
 
         except Exception as e:
             st.error(f"Error while generating video: {str(e)}")
             st.stop()
 
-# ====================== SHOW VIDEO + DOWNLOAD + UPLOAD ======================
+# ====================== SHOW RESULTS ======================
 if "last_video_path" in st.session_state and os.path.exists(st.session_state["last_video_path"]):
 
+    st.markdown("---")
+    st.subheader("Your Birthday Video")
+
+    # Single video player
     st.video(st.session_state["last_video_path"])
+
+    # Show used files
+    if "used_files" in st.session_state:
+        used = st.session_state["used_files"]
+        with st.expander("📁 Files used in this video", expanded=False):
+            st.write(f"**Music:** `{used.get('audio', 'N/A')}`")
+            st.write(f"**Images ({len(used.get('images', []))}):**")
+            st.write(", ".join(used.get("images", [])))
+            st.write(f"**Videos ({len(used.get('videos', []))}):**")
+            st.write(", ".join(used.get("videos", [])) if used.get("videos") else "None")
+
+    st.markdown("---")
 
     # Download button
     with open(st.session_state["last_video_path"], "rb") as f:
@@ -112,7 +118,7 @@ if "last_video_path" in st.session_state and os.path.exists(st.session_state["la
 
     # Upload button
     if st.button("📤 Upload To YouTube", key="upload_btn"):
-        with st.spinner("Uploading to YouTube... Please wait"):
+        with st.spinner("Uploading to YouTube... Please wait (this can take a few minutes)"):
             try:
                 link = upload_video(
                     st.session_state["last_video_path"],
@@ -122,5 +128,6 @@ if "last_video_path" in st.session_state and os.path.exists(st.session_state["la
                 )
                 st.success("✅ Uploaded successfully!")
                 st.markdown(f"**Watch on YouTube:** [Click here]({link})")
+                st.balloons()
             except Exception as e:
                 st.error(f"Upload failed: {e}")
