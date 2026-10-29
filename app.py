@@ -8,126 +8,176 @@ from services.audio_service import generate_audio
 from services.video_service import create_video
 from services.youtube_service import upload_video
 
-# Create generated folder
+# Create folder
 os.makedirs("generated", exist_ok=True)
 
-# Page config
 st.set_page_config(
-    page_title="Birthday Video Generator",
+    page_title="Birthday Video Generator - Batch",
     page_icon="🎂",
     layout="centered"
 )
 
-st.title("🎂 Birthday Video Generator")
-st.write("Create beautiful birthday videos with music and slides.")
+st.title("🎂 Birthday Video Generator — Batch Mode")
 
-# Optional debug
-if st.checkbox("Debug Secrets"):
-    st.write("Client ID exists:", "YOUTUBE_CLIENT_ID" in st.secrets)
-    st.write("Client Secret exists:", "YOUTUBE_CLIENT_SECRET" in st.secrets)
-    st.write("Refresh Token exists:", "YOUTUBE_REFRESH_TOKEN" in st.secrets)
-    st.write("Channel ID exists:", "YOUTUBE_CHANNEL_ID" in st.secrets)
+# ====================== SESSION STATE ======================
+if "batch_running" not in st.session_state:
+    st.session_state.batch_running = False
+if "batch_names" not in st.session_state:
+    st.session_state.batch_names = []
+if "batch_index" not in st.session_state:
+    st.session_state.batch_index = 0
+if "batch_results" not in st.session_state:
+    st.session_state.batch_results = []
+if "current_video" not in st.session_state:
+    st.session_state.current_video = None
+if "stop_batch" not in st.session_state:
+    st.session_state.stop_batch = False
 
-# User inputs
-name = st.text_input("Birthday Person Name")
-message = st.text_area("Custom Birthday Message")
+# ====================== INPUT SECTION ======================
+st.subheader("1. Enter Names")
+names_input = st.text_area(
+    "Enter names (one name per line)",
+    height=160,
+    placeholder="Vikram\nSai\nAbhinav\nPriya\nRahul\nAnanya"
+)
 
-# ====================== GENERATE VIDEO ======================
-if st.button("Generate Video", type="primary"):
+col1, col2 = st.columns(2)
+with col1:
+    max_videos = st.selectbox("How many videos to process?", [5, 10], index=0)
+with col2:
+    default_message = st.text_input(
+        "Default Birthday Message",
+        value="Wishing you happiness, joy and success!"
+    )
 
-    if not name.strip():
-        st.error("Please enter a birthday name.")
+# ====================== CONTROL BUTTONS ======================
+col_a, col_b, col_c = st.columns(3)
+
+with col_a:
+    start_btn = st.button("🚀 Start Batch", type="primary", disabled=st.session_state.batch_running)
+
+with col_b:
+    if st.button("🛑 Stop Batch"):
+        st.session_state.stop_batch = True
+        st.session_state.batch_running = False
+        st.warning("Stopping batch after current video finishes...")
+
+with col_c:
+    if st.button("🗑️ Clear All"):
+        st.session_state.batch_results = []
+        st.session_state.current_video = None
+        st.session_state.batch_index = 0
+        st.session_state.batch_running = False
+        st.session_state.stop_batch = False
+        st.rerun()
+
+# ====================== START BATCH ======================
+if start_btn:
+    names = [n.strip() for n in names_input.strip().split("\n") if n.strip()]
+
+    if not names:
+        st.error("Please enter at least one name.")
         st.stop()
 
-    if not message.strip():
-        message = "Wishing you happiness, joy and success!"
+    names = names[:max_videos]
 
-    with st.spinner("Generating Birthday Video... Please wait"):
+    st.session_state.batch_names = names
+    st.session_state.batch_index = 0
+    st.session_state.batch_results = []
+    st.session_state.batch_running = True
+    st.session_state.stop_batch = False
+    st.session_state.current_video = None
+    st.rerun()
+
+# ====================== BATCH PROCESSING ======================
+if st.session_state.batch_running and not st.session_state.stop_batch:
+
+    names = st.session_state.batch_names
+    idx = st.session_state.batch_index
+
+    if idx >= len(names):
+        st.session_state.batch_running = False
+        st.success("🎉 All videos completed successfully!")
+        st.balloons()
+        st.rerun()
+
+    current_name = names[idx]
+
+    st.markdown(f"### Processing {idx + 1} of {len(names)}: `{current_name}`")
+    st.progress(idx / len(names))
+
+    # Show previous video while generating next one
+    if st.session_state.current_video and os.path.exists(st.session_state.current_video):
+        st.markdown("#### ▶️ Previous Video (still playing)")
+        st.video(st.session_state.current_video)
+        st.caption("You can continue watching while the next video is being generated...")
+
+    status = st.empty()
+
+    try:
+        # Generate
+        status.info(f"🔄 Generating video for **{current_name}**...")
+
+        lyrics = generate_lyrics(current_name, default_message)
+        audio_file = f"generated/{current_name}.mp3"
+        asyncio.run(generate_audio(lyrics, audio_file))
+        time.sleep(0.3)
+
+        video_path, used_files = create_video(current_name, default_message, audio_file)
+
+        # Upload
+        status.info(f"📤 Uploading **{current_name}** to YouTube...")
         try:
-            # 1. Generate lyrics
-            lyrics = generate_lyrics(name, message)
-
-            # 2. Audio
-            audio_file = f"generated/{name}.mp3"
-            asyncio.run(generate_audio(lyrics, audio_file))
-
-            # Verify audio
-            time.sleep(0.4)
-            if not os.path.exists(audio_file) or os.path.getsize(audio_file) < 10000:
-                st.warning("Audio issue detected, retrying...")
-                asyncio.run(generate_audio(lyrics, audio_file))
-                time.sleep(0.4)
-
-            if not os.path.exists(audio_file) or os.path.getsize(audio_file) < 10000:
-                st.error("Failed to create valid audio file.")
-                st.stop()
-
-            st.success("Music Loaded Successfully")
-
-            # 3. Create video
-            video_path, used_files = create_video(name, message, audio_file)
-
-            if not os.path.exists(video_path) or os.path.getsize(video_path) < 100000:
-                st.error("Video file was not created properly.")
-                st.stop()
-
-            # Save to session state
-            st.session_state["last_video_path"] = video_path
-            st.session_state["last_title"] = f"Happy Birthday {name}"
-            st.session_state["last_description"] = message
-            st.session_state["last_name"] = name
-            st.session_state["used_files"] = used_files
-
-            st.success("🎉 Birthday Video Ready!")
-            st.balloons()
-
+            link = upload_video(
+                video_path,
+                f"Happy Birthday {current_name}",
+                default_message,
+                name=current_name
+            )
+            upload_status = "✅ Uploaded successfully"
         except Exception as e:
-            st.error(f"Error while generating video: {str(e)}")
-            st.stop()
+            link = None
+            upload_status = f"❌ Upload failed: {str(e)}"
 
-# ====================== SHOW RESULTS ======================
-if "last_video_path" in st.session_state and os.path.exists(st.session_state["last_video_path"]):
+        # Save result
+        result = {
+            "name": current_name,
+            "video_path": video_path,
+            "link": link,
+            "status": upload_status,
+            "used_files": used_files
+        }
+        st.session_state.batch_results.append(result)
+        st.session_state.current_video = video_path
+        st.session_state.batch_index += 1
 
+        # New video ready → show it + 10 second countdown
+        status.success(f"✅ New video ready: **{current_name}**")
+        st.video(video_path)
+        st.write(upload_status)
+
+        countdown = st.empty()
+        for sec in range(10, 0, -1):
+            if st.session_state.stop_batch:
+                break
+            countdown.warning(f"⏱ Next video in **{sec}** seconds... (Click Stop Batch to cancel)")
+            time.sleep(1)
+
+        countdown.empty()
+        st.rerun()
+
+    except Exception as e:
+        st.error(f"❌ Error processing {current_name}: {e}")
+        st.session_state.batch_running = False
+
+# ====================== RESULTS ======================
+if st.session_state.batch_results:
     st.markdown("---")
-    st.subheader("Your Birthday Video")
+    st.subheader("📋 Batch Results")
 
-    # Single video player
-    st.video(st.session_state["last_video_path"])
-
-    # Show used files
-    if "used_files" in st.session_state:
-        used = st.session_state["used_files"]
-        with st.expander("📁 Files used in this video", expanded=False):
-            st.write(f"**Music:** `{used.get('audio', 'N/A')}`")
-            st.write(f"**Images ({len(used.get('images', []))}):**")
-            st.write(", ".join(used.get("images", [])))
-            st.write(f"**Videos ({len(used.get('videos', []))}):**")
-            st.write(", ".join(used.get("videos", [])) if used.get("videos") else "None")
-
-    st.markdown("---")
-
-    # Download button
-    with open(st.session_state["last_video_path"], "rb") as f:
-        st.download_button(
-            label="⬇️ Download Video",
-            data=f,
-            file_name=f"{st.session_state.get('last_name', 'birthday')}.mp4",
-            mime="video/mp4",
-            key="download_btn"
-        )
-
-    # Upload button
-    if st.button("📤 Upload To YouTube", key="upload_btn"):
-        with st.spinner("Uploading to YouTube... Please wait (this can take a few minutes)"):
-            try:
-                link = upload_video(
-                    st.session_state["last_video_path"],
-                    st.session_state["last_title"],
-                    st.session_state["last_description"],
-                    name=st.session_state.get("last_name", "")
-                )
-                st.success("✅ Uploaded successfully!")
-                st.markdown(f"**Watch on YouTube:** [Click here]({link})")
-                st.balloons()
-            except Exception as e:
-                st.error(f"Upload failed: {e}")
+    for res in reversed(st.session_state.batch_results):
+        with st.expander(f"{res['name']} — {res['status']}", expanded=False):
+            if res["video_path"] and os.path.exists(res["video_path"]):
+                st.video(res["video_path"])
+            if res.get("link"):
+                st.markdown(f"[▶ Watch on YouTube]({res['link']})")
