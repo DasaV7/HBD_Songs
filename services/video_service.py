@@ -32,21 +32,83 @@ def get_media_files(folder, extensions):
     ]
 
 
-def create_slide(text, background, duration, output_file):
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import numpy as np
+
+
+def make_transparent(overlay_path, threshold=240):
+    """
+    Convert JPG overlay to transparent PNG by removing light/white background.
+    """
+    img = Image.open(overlay_path).convert("RGBA")
+    datas = img.getdata()
+
+    new_data = []
+    for item in datas:
+        # If pixel is very light (near white), make it transparent
+        if item[0] > threshold and item[1] > threshold and item[2] > threshold:
+            new_data.append((255, 255, 255, 0))
+        else:
+            new_data.append(item)
+
+    img.putdata(new_data)
+    return img
+
+
+def create_slide(text, background, duration, output_file, overlays_folder="assets/overlays"):
+    # Base image
     img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    # Dark overlay
-    overlay = Image.new("RGBA", img.size, (0, 0, 0, 100))
-    img = Image.alpha_composite(img, overlay)
+    # Dark overlay for better text readability
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 110))
+    img = Image.alpha_composite(img, dark)
 
     draw = ImageDraw.Draw(img)
 
+    # Load font
     try:
         font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 68)
     except:
         font = ImageFont.load_default()
 
+    # ========== ADD RANDOM OVERLAYS ==========
+    overlay_files = get_media_files(overlays_folder, (".jpg", ".jpeg", ".png"))
+
+    if overlay_files:
+        # Pick 1 or 2 random overlays
+        selected = random.sample(overlay_files, k=min(2, len(overlay_files)))
+
+        for overlay_path in selected:
+            try:
+                # Make transparent
+                ov = make_transparent(overlay_path, threshold=235)
+
+                # Resize overlay (keep it reasonable size)
+                max_size = random.randint(280, 420)
+                ov.thumbnail((max_size, max_size), Image.LANCZOS)
+
+                # Random position - avoid center text area
+                # Text is roughly in the middle, so place overlays on sides or corners
+                positions = [
+                    (30, 30),                           # top-left
+                    (1280 - ov.width - 30, 30),         # top-right
+                    (30, 720 - ov.height - 30),         # bottom-left
+                    (1280 - ov.width - 30, 720 - ov.height - 30),  # bottom-right
+                    (30, 300),                          # mid-left
+                    (1280 - ov.width - 30, 300),        # mid-right
+                ]
+
+                pos = random.choice(positions)
+
+                # Paste with transparency
+                img.paste(ov, pos, ov)
+
+            except Exception as e:
+                print(f"Overlay failed: {e}")
+                continue
+
+    # ========== DRAW TEXT (on top of everything) ==========
     draw.multiline_text(
         (70, 220),
         text,
@@ -60,18 +122,11 @@ def create_slide(text, background, duration, output_file):
     draw.rounded_rectangle(
         (40, 140, 1240, 580),
         radius=30,
-        outline=(255, 255, 255, 140),
+        outline=(255, 255, 255, 150),
         width=3
     )
 
-    # Confetti (optional)
-    try:
-        confetti = Image.open("assets/overlays/confetti.png").convert("RGBA")
-        confetti = confetti.resize((1280, 720))
-        img.paste(confetti, (0, 0), confetti)
-    except:
-        pass
-
+    # Convert and save
     img = img.convert("RGB")
     img.save(output_file, quality=95)
 
