@@ -1,7 +1,19 @@
-# Fix for newer Pillow versions
+# Fix for newer Pillow (ANTIALIAS removed)
 from PIL import Image
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.LANCZOS
+
+from moviepy.editor import (
+    ImageClip,
+    VideoFileClip,
+    AudioFileClip,
+    concatenate_videoclips,
+    CompositeVideoClip
+)
+
+from PIL import ImageDraw, ImageFont
+import random
+import os
 
 def create_video(name: str, message: str, audio_file: str):
     audio = AudioFileClip(audio_file)
