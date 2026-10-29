@@ -1,4 +1,6 @@
-# Fix for newer Pillow (ANTIALIAS removed)
+# services/video_service.py
+
+# Fix for newer Pillow versions
 from PIL import Image
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.LANCZOS
@@ -15,6 +17,81 @@ from PIL import ImageDraw, ImageFont
 import random
 import os
 
+
+COLORS = [
+    "#FF9AA2",  # pastel pink
+    "#FFDAC1",  # peach
+    "#E2F0CB",  # mint
+    "#B5EAD7",  # aqua
+    "#C7CEEA",  # lavender
+    "#A0C4FF",  # sky blue
+    "#FFD6A5"   # soft orange
+]
+
+
+def get_media_files(folder, extensions):
+    """Helper to get list of media files"""
+    if not os.path.exists(folder):
+        return []
+    return [
+        os.path.join(folder, f)
+        for f in os.listdir(folder)
+        if f.lower().endswith(extensions)
+    ]
+
+
+def create_slide(text, background, duration, output_file):
+    img = Image.open(background)
+    img = img.convert("RGBA")
+    img = img.resize((1280, 720), Image.LANCZOS)
+
+    # Dark overlay
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 90))
+    img = Image.alpha_composite(img, overlay)
+
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 75)
+    except:
+        font = ImageFont.load_default()
+
+    draw.multiline_text(
+        (100, 240),
+        text,
+        font=font,
+        fill=random.choice(COLORS),
+        spacing=18,
+        align="center"
+    )
+
+    draw.rounded_rectangle(
+        (60, 160, 1220, 560),
+        radius=40,
+        outline=(255, 255, 255, 120),
+        width=3
+    )
+
+    # Keep existing confetti
+    try:
+        confetti = Image.open("assets/overlays/confetti.png").convert("RGBA")
+        confetti = confetti.resize((1280, 720))
+        img.paste(confetti, (0, 0), confetti)
+    except:
+        pass
+
+    img = img.convert("RGB")
+    img.save(output_file)
+
+    clip = (
+        ImageClip(output_file)
+        .set_duration(duration)
+        .fadein(0.8)
+        .fadeout(0.8)
+    )
+    return clip
+
+
 def create_video(name: str, message: str, audio_file: str):
     audio = AudioFileClip(audio_file)
     total_duration = audio.duration
@@ -23,11 +100,6 @@ def create_video(name: str, message: str, audio_file: str):
     background_images = get_media_files("assets/backgrounds", (".jpg", ".jpeg", ".png"))
     video_clips_list = get_media_files("assets/videos", (".mp4", ".mov", ".avi", ".mkv"))
     video_clips_list += get_media_files("assets/shorts", (".mp4", ".mov", ".avi", ".mkv"))
-
-    print("=== DEBUG INFO ===")
-    print(f"Found images: {len(background_images)}")
-    print(f"Found videos: {len(video_clips_list)}")
-    print("Video files:", video_clips_list)
 
     if len(background_images) < 3:
         raise Exception("Need at least 3 images in assets/backgrounds")
@@ -44,7 +116,7 @@ def create_video(name: str, message: str, audio_file: str):
     clips = []
     remaining_duration = total_duration
 
-    # 1. Opening slide (shorter so we have more room for videos)
+    # 1. Opening slide
     used_files["images"].append(os.path.basename(background_images[0]))
     slide1 = create_slide(
         f"Happy Birthday\n{name}",
@@ -55,17 +127,15 @@ def create_video(name: str, message: str, audio_file: str):
     clips.append(slide1)
     remaining_duration -= slide1.duration
 
-    # 2. FORCE insert videos if available
+    # 2. Insert videos
     videos_added = 0
     for video_path in video_clips_list:
         if videos_added >= 2 or remaining_duration < 5:
             break
 
         try:
-            print(f"Trying to load video: {video_path}")
             vclip = VideoFileClip(video_path)
 
-            # Take a reasonable portion
             desired_len = min(8, vclip.duration, remaining_duration * 0.35)
             if desired_len < 3:
                 vclip.close()
@@ -79,7 +149,6 @@ def create_video(name: str, message: str, audio_file: str):
                      .fadein(0.5)
                      .fadeout(0.5))
 
-            # Center if needed
             if vclip.w < 1280:
                 bg = (ImageClip(background_images[videos_added % len(background_images)])
                       .set_duration(vclip.duration)
@@ -91,10 +160,9 @@ def create_video(name: str, message: str, audio_file: str):
             used_files["videos"].append(os.path.basename(video_path))
             remaining_duration -= vclip.duration
             videos_added += 1
-            print(f"Successfully added video: {os.path.basename(video_path)}")
 
         except Exception as e:
-            print(f"Failed to load video {video_path}: {str(e)}")
+            print(f"Skipping video {video_path}: {e}")
             continue
 
     # 3. Message slide
@@ -154,11 +222,6 @@ def create_video(name: str, message: str, audio_file: str):
         threads=4,
         logger=None
     )
-    
-    video_path, used_files = create_video(name, message, audio_file)
-
-    st.write("### Debug - Used Files")
-    st.json(used_files)
 
     final_video.close()
     audio.close()
