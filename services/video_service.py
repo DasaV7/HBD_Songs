@@ -189,6 +189,17 @@ def create_video(name: str, message: str, audio_file: str):
     safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
     output_path = f"generated/{safe_name}.mp4"
 
+    # final_video.write_videofile(
+    #     output_path,
+    #     fps=24,
+    #     codec="libx264",
+    #     audio_codec="aac",
+    #     temp_audiofile="generated/temp_audio.m4a",
+    #     remove_temp=True,
+    #     threads=4,
+    #     logger=None,
+    #     preset="medium"
+    # )
     final_video.write_videofile(
         output_path,
         fps=24,
@@ -198,7 +209,8 @@ def create_video(name: str, message: str, audio_file: str):
         remove_temp=True,
         threads=4,
         logger=None,
-        preset="medium"
+        preset="medium",
+        ffmpeg_params=["-movflags", "+faststart"]
     )
 
     # Cleanup
