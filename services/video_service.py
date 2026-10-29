@@ -1,6 +1,5 @@
 # services/video_service.py
 
-# Fix for newer Pillow versions
 from PIL import Image
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.LANCZOS
@@ -10,27 +9,23 @@ from moviepy.editor import (
     VideoFileClip,
     AudioFileClip,
     concatenate_videoclips,
-    CompositeVideoClip
+    CompositeVideoClip,
+    concatenate_audioclips
 )
 
 from PIL import ImageDraw, ImageFont
 import random
 import os
+import shutil
 
 
 COLORS = [
-    "#FF9AA2",  # pastel pink
-    "#FFDAC1",  # peach
-    "#E2F0CB",  # mint
-    "#B5EAD7",  # aqua
-    "#C7CEEA",  # lavender
-    "#A0C4FF",  # sky blue
-    "#FFD6A5"   # soft orange
+    "#FF9AA2", "#FFDAC1", "#E2F0CB", "#B5EAD7",
+    "#C7CEEA", "#A0C4FF", "#FFD6A5", "#FFB7B2"
 ]
 
 
 def get_media_files(folder, extensions):
-    """Helper to get list of media files"""
     if not os.path.exists(folder):
         return []
     return [
@@ -41,38 +36,35 @@ def get_media_files(folder, extensions):
 
 
 def create_slide(text, background, duration, output_file):
-    img = Image.open(background)
-    img = img.convert("RGBA")
+    img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    # Dark overlay
-    overlay = Image.new("RGBA", img.size, (0, 0, 0, 90))
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 100))
     img = Image.alpha_composite(img, overlay)
 
     draw = ImageDraw.Draw(img)
 
     try:
-        font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 75)
+        font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 70)
     except:
         font = ImageFont.load_default()
 
     draw.multiline_text(
-        (100, 240),
+        (80, 230),
         text,
         font=font,
         fill=random.choice(COLORS),
-        spacing=18,
+        spacing=16,
         align="center"
     )
 
     draw.rounded_rectangle(
-        (60, 160, 1220, 560),
-        radius=40,
-        outline=(255, 255, 255, 120),
+        (50, 150, 1230, 570),
+        radius=35,
+        outline=(255, 255, 255, 130),
         width=3
     )
 
-    # Keep existing confetti
     try:
         confetti = Image.open("assets/overlays/confetti.png").convert("RGBA")
         confetti = confetti.resize((1280, 720))
@@ -81,28 +73,34 @@ def create_slide(text, background, duration, output_file):
         pass
 
     img = img.convert("RGB")
-    img.save(output_file)
+    img.save(output_file, quality=95)
 
-    clip = (
-        ImageClip(output_file)
-        .set_duration(duration)
-        .fadein(0.8)
-        .fadeout(0.8)
-    )
-    return clip
+    return (ImageClip(output_file)
+            .set_duration(duration)
+            .fadein(0.7)
+            .fadeout(0.7))
 
 
 def create_video(name: str, message: str, audio_file: str):
-    audio = AudioFileClip(audio_file)
-    total_duration = audio.duration
+    # Clean previous temp files
+    for f in os.listdir("generated"):
+        if f.startswith("slide") or f.startswith("temp"):
+            try:
+                os.remove(os.path.join("generated", f))
+            except:
+                pass
 
-    # ---------- Collect media ----------
+    audio = AudioFileClip(audio_file)
+    
+    # We want final video around 10 minutes → make base ~5 min then loop
+    target_base_duration = 5 * 60  # 5 minutes
+
     background_images = get_media_files("assets/backgrounds", (".jpg", ".jpeg", ".png"))
     video_clips_list = get_media_files("assets/videos", (".mp4", ".mov", ".avi", ".mkv"))
     video_clips_list += get_media_files("assets/shorts", (".mp4", ".mov", ".avi", ".mkv"))
 
-    if len(background_images) < 3:
-        raise Exception("Need at least 3 images in assets/backgrounds")
+    if len(background_images) < 5:
+        raise Exception("Need at least 5 images in assets/backgrounds")
 
     random.shuffle(background_images)
     random.shuffle(video_clips_list)
@@ -114,100 +112,79 @@ def create_video(name: str, message: str, audio_file: str):
     }
 
     clips = []
-    remaining_duration = total_duration
+    remaining = target_base_duration
 
-    # 1. Opening slide
-    used_files["images"].append(os.path.basename(background_images[0]))
-    slide1 = create_slide(
+    # ---------- 8-9 SLIDES + VIDEOS ----------
+    slide_texts = [
         f"Happy Birthday\n{name}",
-        background_images[0],
-        min(5, remaining_duration * 0.15),
-        "generated/slide1.png"
-    )
-    clips.append(slide1)
-    remaining_duration -= slide1.duration
+        "Wishing You\nAll the Happiness",
+        message[:50] + ("..." if len(message) > 50 else ""),
+        "May Your Day\nBe Filled with Joy",
+        "Celebrate in\nStyle Today!",
+        f"Cheers to You\n{name}",
+        "Lots of Love\n& Best Wishes",
+        f"Thank You\n{name} 💖",
+        "Have an Amazing\nBirthday!"
+    ]
 
-    # 2. Insert videos
-    videos_added = 0
-    for video_path in video_clips_list:
-        if videos_added >= 2 or remaining_duration < 5:
+    img_index = 0
+    video_index = 0
+
+    for i, text in enumerate(slide_texts):
+        if remaining < 4:
             break
 
-        try:
-            vclip = VideoFileClip(video_path)
+        # Insert a video every 3rd slide if available
+        if video_clips_list and i % 3 == 1 and video_index < len(video_clips_list) and remaining > 8:
+            try:
+                vpath = video_clips_list[video_index]
+                vclip = VideoFileClip(vpath)
+                dur = min(7, vclip.duration, remaining * 0.2)
+                start = 0 if vclip.duration <= dur else random.uniform(0, vclip.duration - dur)
 
-            desired_len = min(8, vclip.duration, remaining_duration * 0.35)
-            if desired_len < 3:
-                vclip.close()
-                continue
+                vclip = (vclip.subclip(start, start + dur)
+                             .resize(height=720)
+                             .fadein(0.5)
+                             .fadeout(0.5))
 
-            start = 0 if vclip.duration <= desired_len else random.uniform(0, max(0.1, vclip.duration - desired_len))
+                if vclip.w < 1280:
+                    bg = ImageClip(background_images[img_index % len(background_images)]).set_duration(dur).resize((1280,720))
+                    vclip = CompositeVideoClip([bg, vclip.set_position("center")])
 
-            vclip = (vclip
-                     .subclip(start, start + desired_len)
-                     .resize(height=720)
-                     .fadein(0.5)
-                     .fadeout(0.5))
+                clips.append(vclip)
+                used_files["videos"].append(os.path.basename(vpath))
+                remaining -= dur
+                video_index += 1
+            except Exception as e:
+                print(f"Video skip: {e}")
 
-            if vclip.w < 1280:
-                bg = (ImageClip(background_images[videos_added % len(background_images)])
-                      .set_duration(vclip.duration)
-                      .resize((1280, 720)))
-                vclip = vclip.set_position("center")
-                vclip = CompositeVideoClip([bg, vclip])
+        # Normal slide
+        bg = background_images[img_index % len(background_images)]
+        used_files["images"].append(os.path.basename(bg))
+        
+        dur = min(8, remaining * 0.18)
+        slide = create_slide(text, bg, dur, f"generated/slide_{i}.png")
+        clips.append(slide)
+        remaining -= dur
+        img_index += 1
 
-            clips.append(vclip)
-            used_files["videos"].append(os.path.basename(video_path))
-            remaining_duration -= vclip.duration
-            videos_added += 1
-
-        except Exception as e:
-            print(f"Skipping video {video_path}: {e}")
-            continue
-
-    # 3. Message slide
-    if remaining_duration > 4:
-        used_files["images"].append(os.path.basename(background_images[1]))
-        slide_msg = create_slide(
-            message[:55] + ("..." if len(message) > 55 else ""),
-            background_images[1],
-            min(6, remaining_duration * 0.3),
-            "generated/slide_msg.png"
-        )
-        clips.append(slide_msg)
-        remaining_duration -= slide_msg.duration
-
-    # 4. Closing slides
-    if remaining_duration > 3:
-        used_files["images"].append(os.path.basename(background_images[2]))
-        slide_close = create_slide(
-            "Celebrate Your\nSpecial Day!",
-            background_images[2],
-            remaining_duration * 0.55,
-            "generated/slide_close.png"
-        )
-        clips.append(slide_close)
-        remaining_duration -= slide_close.duration
-
-    if remaining_duration > 2:
-        used_files["images"].append(os.path.basename(background_images[0]))
-        slide_end = create_slide(
-            f"Thank You\n{name} 💖",
-            background_images[0],
-            remaining_duration,
-            "generated/slide_end.png"
-        )
-        clips.append(slide_end)
-
-    # ---------- Final assembly ----------
     if not clips:
-        raise Exception("No clips were created")
+        raise Exception("No clips created")
 
-    final_video = concatenate_videoclips(clips, method="compose")
-    final_video = final_video.set_audio(audio)
+    # Create base video (~5 min)
+    base_video = concatenate_videoclips(clips, method="compose")
 
-    if final_video.duration > audio.duration:
-        final_video = final_video.subclip(0, audio.duration)
+    # Loop audio to match base duration if needed
+    if audio.duration < base_video.duration:
+        loops = int(base_video.duration // audio.duration) + 1
+        audio = concatenate_audioclips([audio] * loops).subclip(0, base_video.duration)
+    else:
+        audio = audio.subclip(0, base_video.duration)
+
+    base_video = base_video.set_audio(audio)
+
+    # ---------- LOOP THE VIDEO TO MAKE ~10 MINUTES ----------
+    final_video = concatenate_videoclips([base_video, base_video])
 
     safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
     output_path = f"generated/{safe_name}.mp4"
@@ -220,10 +197,13 @@ def create_video(name: str, message: str, audio_file: str):
         temp_audiofile="generated/temp_audio.m4a",
         remove_temp=True,
         threads=4,
-        logger=None
+        logger=None,
+        preset="medium"
     )
 
+    # Cleanup
     final_video.close()
+    base_video.close()
     audio.close()
 
     return output_path, used_files
