@@ -1,192 +1,172 @@
-import streamlit as st
-import asyncio
+# services/video_service.py
+
+from PIL import Image
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.LANCZOS
+
+from moviepy.editor import (
+    ImageClip,
+    AudioFileClip,
+    concatenate_videoclips,
+    concatenate_audioclips,
+    vfx
+)
+
+from PIL import ImageDraw, ImageFont
+import random
 import os
-import time
 
-from services.lyrics_service import generate_lyrics
-from services.audio_service import generate_audio
-from services.video_service import create_video
-from services.youtube_service import upload_video
 
-os.makedirs("generated", exist_ok=True)
+COLORS = [
+    "#FF9AA2", "#FFDAC1", "#E2F0CB", "#B5EAD7",
+    "#C7CEEA", "#A0C4FF", "#FFD6A5", "#FFB7B2",
+    "#FF8FAB", "#FDE4CF"
+]
 
-st.set_page_config(
-    page_title="Birthday Video Generator - Batch",
-    page_icon="🎂",
-    layout="centered"
-)
 
-st.title("🎂 Birthday Video Generator — Batch Mode")
+def get_media_files(folder, extensions):
+    if not os.path.exists(folder):
+        return []
+    return [
+        os.path.join(folder, f)
+        for f in os.listdir(folder)
+        if f.lower().endswith(extensions)
+    ]
 
-# ====================== SESSION STATE ======================
-if "batch_running" not in st.session_state:
-    st.session_state.batch_running = False
-if "batch_names" not in st.session_state:
-    st.session_state.batch_names = []
-if "batch_index" not in st.session_state:
-    st.session_state.batch_index = 0
-if "batch_results" not in st.session_state:
-    st.session_state.batch_results = []
-if "current_video" not in st.session_state:
-    st.session_state.current_video = None
-if "stop_batch" not in st.session_state:
-    st.session_state.stop_batch = False
 
-# ====================== INPUT SECTION ======================
-st.subheader("1. Enter Names")
-names_input = st.text_area(
-    "Enter names (one name per line)",
-    height=160,
-    placeholder="Vikram\nSai\nAbhinav\nPriya\nRahul\nAnanya"
-)
+def create_slide(text, background, duration, output_file):
+    img = Image.open(background).convert("RGBA")
+    img = img.resize((1280, 720), Image.LANCZOS)
 
-col1, col2 = st.columns(2)
+    # Soft dark overlay
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 100))
+    img = Image.alpha_composite(img, dark)
 
-with col1:
-    max_videos = st.selectbox("How many videos?", [5, 10], index=0)
-
-with col2:
-    auto_upload = st.selectbox(
-        "Auto Upload to YouTube",
-        ["Enabled", "Disabled"],
-        index=0
-    )
-
-st.info("Message format that will be used: **Happy Birthday {name}!**")
-
-# ====================== CONTROL BUTTONS ======================
-col_a, col_b, col_c = st.columns(3)
-
-with col_a:
-    start_btn = st.button("🚀 Start Batch", type="primary", disabled=st.session_state.batch_running)
-
-with col_b:
-    if st.button("🛑 Stop Batch"):
-        st.session_state.stop_batch = True
-        st.session_state.batch_running = False
-        st.warning("Stopping batch after current video...")
-
-with col_c:
-    if st.button("🗑️ Clear All"):
-        st.session_state.batch_results = []
-        st.session_state.current_video = None
-        st.session_state.batch_index = 0
-        st.session_state.batch_running = False
-        st.session_state.stop_batch = False
-        st.rerun()
-
-# ====================== START BATCH ======================
-if start_btn:
-    names = [n.strip() for n in names_input.strip().split("\n") if n.strip()]
-
-    if not names:
-        st.error("Please enter at least one name.")
-        st.stop()
-
-    names = names[:max_videos]
-
-    st.session_state.batch_names = names
-    st.session_state.batch_index = 0
-    st.session_state.batch_results = []
-    st.session_state.batch_running = True
-    st.session_state.stop_batch = False
-    st.session_state.current_video = None
-    st.session_state.auto_upload = (auto_upload == "Enabled")
-    st.rerun()
-
-# ====================== BATCH PROCESSING ======================
-if st.session_state.batch_running and not st.session_state.stop_batch:
-
-    names = st.session_state.batch_names
-    idx = st.session_state.batch_index
-
-    if idx >= len(names):
-        st.session_state.batch_running = False
-        st.success("🎉 All videos completed!")
-        st.balloons()
-        st.rerun()
-
-    current_name = names[idx]
-    personalized_message = f"Happy Birthday {current_name}!"
-
-    st.markdown(f"### Processing {idx + 1} of {len(names)}: `{current_name}`")
-    st.progress(idx / len(names))
-
-    # Show previous video while generating
-    if st.session_state.current_video and os.path.exists(st.session_state.current_video):
-        st.markdown("#### ▶️ Previous Video (still playing)")
-        st.video(st.session_state.current_video)
-        st.caption("Keep watching while the next video is generating...")
-
-    status = st.empty()
+    draw = ImageDraw.Draw(img)
 
     try:
-        # Generate video
-        status.info(f"🔄 Generating video for **{current_name}**...")
+        font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 68)
+    except:
+        font = ImageFont.load_default()
 
-        lyrics = generate_lyrics(current_name, personalized_message)
-        audio_file = f"generated/{current_name}.mp3"
-        asyncio.run(generate_audio(lyrics, audio_file))
-        time.sleep(0.3)
+    # Slightly randomize text position for variety
+    x_pos = random.randint(60, 90)
+    y_pos = random.randint(200, 250)
 
-        video_path, used_files = create_video(current_name, personalized_message, audio_file)
+    draw.multiline_text(
+        (x_pos, y_pos),
+        text,
+        font=font,
+        fill=random.choice(COLORS),
+        spacing=15,
+        align="center"
+    )
 
-        # Upload only if enabled
-        link = None
-        if st.session_state.get("auto_upload", True):
-            status.info(f"📤 Uploading **{current_name}** to YouTube...")
+    # Elegant frame
+    draw.rounded_rectangle(
+        (40, 140, 1240, 580),
+        radius=30,
+        outline=(255, 255, 255, 150),
+        width=3
+    )
+
+    img = img.convert("RGB")
+    img.save(output_file, quality=95)
+
+    # Create clip with slow Ken Burns zoom (makes it much more interesting)
+    clip = ImageClip(output_file).set_duration(duration)
+    
+    # Random zoom direction
+    zoom_factor = random.uniform(1.08, 1.15)
+    
+    clip = clip.resize(lambda t: 1 + (zoom_factor - 1) * t / duration)
+    clip = clip.fadein(1.2).fadeout(1.2)
+
+    return clip
+
+
+def create_video(name: str, message: str, audio_file: str):
+    # Clean old slides
+    for f in os.listdir("generated"):
+        if f.startswith("slide"):
             try:
-                link = upload_video(
-                    video_path,
-                    f"Happy Birthday {current_name}",
-                    personalized_message,
-                    name=current_name
-                )
-                upload_status = "✅ Uploaded successfully"
-            except Exception as e:
-                upload_status = f"❌ Upload failed: {str(e)}"
-        else:
-            upload_status = "⏸️ Upload skipped (Auto Upload is Disabled)"
+                os.remove(os.path.join("generated", f))
+            except:
+                pass
 
-        # Save result
-        result = {
-            "name": current_name,
-            "video_path": video_path,
-            "link": link,
-            "status": upload_status,
-            "used_files": used_files
-        }
-        st.session_state.batch_results.append(result)
-        st.session_state.current_video = video_path
-        st.session_state.batch_index += 1
+    audio = AudioFileClip(audio_file)
+    background_images = get_media_files("assets/backgrounds", (".jpg", ".jpeg", ".png"))
 
-        # Show new video + countdown
-        status.success(f"✅ Video ready: **{current_name}**")
-        st.video(video_path)
-        st.write(upload_status)
+    if len(background_images) < 5:
+        raise Exception("Need at least 5 images in assets/backgrounds")
 
-        countdown = st.empty()
-        for sec in range(10, 0, -1):
-            if st.session_state.stop_batch:
-                break
-            countdown.warning(f"⏱ Next video in **{sec}** seconds...")
-            time.sleep(1)
+    random.shuffle(background_images)
 
-        countdown.empty()
-        st.rerun()
+    used_files = {
+        "audio": os.path.basename(audio_file),
+        "images": [],
+        "videos": []
+    }
 
-    except Exception as e:
-        st.error(f"❌ Error on {current_name}: {e}")
-        st.session_state.batch_running = False
+    slide_texts = [
+        f"Happy Birthday\n{name}",
+        "Wishing You\nAll the Happiness",
+        message,
+        "May Your Day\nBe Filled with Joy",
+        "Celebrate in\nStyle Today!",
+        f"Cheers to You\n{name}",
+        "Lots of Love\n& Best Wishes",
+        "Have an Amazing\nBirthday!",
+        f"Thank You\n{name} 💖",
+        "Enjoy Your\nSpecial Day!"
+    ]
 
-# ====================== RESULTS ======================
-if st.session_state.batch_results:
-    st.markdown("---")
-    st.subheader("📋 Batch Results")
+    clips = []
+    slide_duration = 17  # seconds per slide
 
-    for res in reversed(st.session_state.batch_results):
-        with st.expander(f"{res['name']} — {res['status']}", expanded=False):
-            if res["video_path"] and os.path.exists(res["video_path"]):
-                st.video(res["video_path"])
-            if res.get("link"):
-                st.markdown(f"[▶ Watch on YouTube]({res['link']})")
+    for i, text in enumerate(slide_texts):
+        bg = background_images[i % len(background_images)]
+        used_files["images"].append(os.path.basename(bg))
+
+        slide = create_slide(
+            text,
+            bg,
+            slide_duration,
+            f"generated/slide_{i}.png"
+        )
+        clips.append(slide)
+
+    base_video = concatenate_videoclips(clips, method="compose")
+
+    # Loop audio if needed
+    if audio.duration < base_video.duration:
+        loops = int(base_video.duration // audio.duration) + 1
+        audio = concatenate_audioclips([audio] * loops)
+
+    audio = audio.subclip(0, base_video.duration)
+    base_video = base_video.set_audio(audio)
+
+    # Loop once → ~6 minutes
+    final_video = concatenate_videoclips([base_video, base_video])
+
+    safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
+    output_path = f"generated/{safe_name}.mp4"
+
+    final_video.write_videofile(
+        output_path,
+        fps=24,
+        codec="libx264",
+        audio_codec="aac",
+        temp_audiofile="generated/temp_audio.m4a",
+        remove_temp=True,
+        threads=4,
+        logger=None,
+        preset="medium",
+        ffmpeg_params=["-movflags", "+faststart"]
+    )
+
+    final_video.close()
+    base_video.close()
+    audio.close()
+
+    return output_path, used_files
