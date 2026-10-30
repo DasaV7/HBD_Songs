@@ -8,7 +8,8 @@ from moviepy.editor import (
     ImageClip,
     AudioFileClip,
     concatenate_videoclips,
-    concatenate_audioclips
+    concatenate_audioclips,
+    vfx
 )
 
 from PIL import ImageDraw, ImageFont
@@ -18,7 +19,8 @@ import os
 
 COLORS = [
     "#FF9AA2", "#FFDAC1", "#E2F0CB", "#B5EAD7",
-    "#C7CEEA", "#A0C4FF", "#FFD6A5", "#FFB7B2"
+    "#C7CEEA", "#A0C4FF", "#FFD6A5", "#FFB7B2",
+    "#FF8FAB", "#FDE4CF"
 ]
 
 
@@ -32,79 +34,59 @@ def get_media_files(folder, extensions):
     ]
 
 
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
-import random
-import os
-
-
-def remove_background(overlay_path):
-    """
-    Better background removal for both white and black backgrounds.
-    """
-    img = Image.open(overlay_path).convert("RGBA")
-    arr = np.array(img)
-
-    r, g, b, a = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2], arr[:, :, 3]
-
-    # Detect near-white pixels
-    white_mask = (r > 230) & (g > 230) & (b > 230)
-
-    # Detect near-black pixels
-    black_mask = (r < 40) & (g < 40) & (b < 40)
-
-    # Make both transparent
-    arr[:, :, 3] = np.where(white_mask | black_mask, 0, a)
-
-    return Image.fromarray(arr)
-
-
 def create_slide(text, background, duration, output_file):
-    # Base image
     img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    # Soft dark overlay for better text readability
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 110))
+    # Soft dark overlay
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 100))
     img = Image.alpha_composite(img, dark)
 
     draw = ImageDraw.Draw(img)
 
-    # Font
     try:
-        font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 70)
+        font = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 68)
     except:
         font = ImageFont.load_default()
 
-    # Main text
+    # Slightly randomize text position for variety
+    x_pos = random.randint(60, 90)
+    y_pos = random.randint(200, 250)
+
     draw.multiline_text(
-        (70, 230),
+        (x_pos, y_pos),
         text,
         font=font,
         fill=random.choice(COLORS),
-        spacing=16,
+        spacing=15,
         align="center"
     )
 
-    # Elegant thin frame
+    # Elegant frame
     draw.rounded_rectangle(
-        (50, 160, 1230, 560),
-        radius=35,
-        outline=(255, 255, 255, 160),
+        (40, 140, 1240, 580),
+        radius=30,
+        outline=(255, 255, 255, 150),
         width=3
     )
 
-    # Convert and save
     img = img.convert("RGB")
     img.save(output_file, quality=95)
 
-    return (ImageClip(output_file)
-            .set_duration(duration)
-            .fadein(1.0)
-            .fadeout(1.0))
+    # Create clip with slow Ken Burns zoom (makes it much more interesting)
+    clip = ImageClip(output_file).set_duration(duration)
+    
+    # Random zoom direction
+    zoom_factor = random.uniform(1.08, 1.15)
+    
+    clip = clip.resize(lambda t: 1 + (zoom_factor - 1) * t / duration)
+    clip = clip.fadein(1.2).fadeout(1.2)
+
+    return clip
+
 
 def create_video(name: str, message: str, audio_file: str):
-    # Clean old temp slides
+    # Clean old slides
     for f in os.listdir("generated"):
         if f.startswith("slide"):
             try:
@@ -113,7 +95,6 @@ def create_video(name: str, message: str, audio_file: str):
                 pass
 
     audio = AudioFileClip(audio_file)
-
     background_images = get_media_files("assets/backgrounds", (".jpg", ".jpeg", ".png"))
 
     if len(background_images) < 5:
@@ -127,11 +108,10 @@ def create_video(name: str, message: str, audio_file: str):
         "videos": []
     }
 
-    # ---------- 10 SLIDES × ~16-18 seconds = ~3 minutes ----------
     slide_texts = [
         f"Happy Birthday\n{name}",
         "Wishing You\nAll the Happiness",
-        message[:55] + ("..." if len(message) > 55 else ""),
+        message,
         "May Your Day\nBe Filled with Joy",
         "Celebrate in\nStyle Today!",
         f"Cheers to You\n{name}",
@@ -142,7 +122,7 @@ def create_video(name: str, message: str, audio_file: str):
     ]
 
     clips = []
-    slide_duration = 17  # seconds per slide (adjust between 15-18 if you want)
+    slide_duration = 17  # seconds per slide
 
     for i, text in enumerate(slide_texts):
         bg = background_images[i % len(background_images)]
@@ -156,18 +136,17 @@ def create_video(name: str, message: str, audio_file: str):
         )
         clips.append(slide)
 
-    # Create base video (~ 10 × 17s = 170 seconds ≈ 2.8 min)
     base_video = concatenate_videoclips(clips, method="compose")
 
-    # Match audio length to base video
+    # Loop audio if needed
     if audio.duration < base_video.duration:
-        loops_needed = int(base_video.duration // audio.duration) + 1
-        audio = concatenate_audioclips([audio] * loops_needed)
+        loops = int(base_video.duration // audio.duration) + 1
+        audio = concatenate_audioclips([audio] * loops)
 
     audio = audio.subclip(0, base_video.duration)
     base_video = base_video.set_audio(audio)
 
-    # ---------- LOOP ONCE → Final ~6 minutes ----------
+    # Loop once → ~6 minutes
     final_video = concatenate_videoclips([base_video, base_video])
 
     safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
@@ -186,7 +165,6 @@ def create_video(name: str, message: str, audio_file: str):
         ffmpeg_params=["-movflags", "+faststart"]
     )
 
-    # Cleanup
     final_video.close()
     base_video.close()
     audio.close()
