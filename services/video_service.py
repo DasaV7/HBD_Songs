@@ -8,15 +8,12 @@ from moviepy.editor import (
     ImageClip,
     AudioFileClip,
     concatenate_videoclips,
-    concatenate_audioclips,
-    CompositeVideoClip,
-    vfx
+    concatenate_audioclips
 )
 
-from PIL import ImageDraw, ImageFont, ImageFilter, ImageEnhance
+from PIL import ImageDraw, ImageFont, ImageEnhance
 import random
 import os
-import numpy as np
 
 
 COLORS = [
@@ -64,22 +61,16 @@ def draw_sparkles(draw, width=1280, height=720, count=30):
         color = random.choice(["#FFD700", "#FFFFFF", "#FFF8DC", "#FFE4B5"])
         draw.line([(x - size, y), (x + size, y)], fill=color, width=2)
         draw.line([(x, y - size), (x, y + size)], fill=color, width=2)
-        # small diagonal
-        draw.line([(x - size//2, y - size//2), (x + size//2, y + size//2)], fill=color, width=1)
 
 
 def apply_vignette(img):
-    """Add soft cinematic vignette"""
     width, height = img.size
     vignette = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(vignette)
 
-    for i in range(80):
-        alpha = int(i * 1.8)
-        draw.rectangle(
-            [i, i, width - i, height - i],
-            outline=(0, 0, 0, alpha)
-        )
+    for i in range(70):
+        alpha = int(i * 1.6)
+        draw.rectangle([i, i, width - i, height - i], outline=(0, 0, 0, alpha))
     return Image.alpha_composite(img.convert("RGBA"), vignette)
 
 
@@ -88,12 +79,12 @@ def create_slide(text, background, duration, output_file):
     img = img.resize((1280, 720), Image.LANCZOS)
 
     # Soft dark overlay
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 90))
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 95))
     img = Image.alpha_composite(img, dark)
 
-    # Slight color enhancement
+    # Slight color boost
     enhancer = ImageEnhance.Color(img)
-    img = enhancer.enhance(1.15)
+    img = enhancer.enhance(1.12)
 
     draw = ImageDraw.Draw(img)
 
@@ -101,7 +92,7 @@ def create_slide(text, background, duration, output_file):
     font = None
     for fpath in FONT_CANDIDATES:
         try:
-            font = ImageFont.truetype(fpath, random.randint(66, 76))
+            font = ImageFont.truetype(fpath, random.randint(62, 74))
             break
         except:
             continue
@@ -109,24 +100,24 @@ def create_slide(text, background, duration, output_file):
         font = ImageFont.load_default()
 
     # Text position
-    x_pos = random.randint(55, 95)
-    y_pos = random.randint(210, 270)
+    x_pos = random.randint(50, 90)
+    y_pos = random.randint(180, 260)
 
-    # Soft text shadow
-    draw.multiline_text((x_pos + 4, y_pos + 4), text, font=font, fill=(0, 0, 0, 200), spacing=15, align="center")
-    draw.multiline_text((x_pos, y_pos), text, font=font, fill=random.choice(COLORS), spacing=15, align="center")
+    # Soft shadow
+    draw.multiline_text((x_pos + 4, y_pos + 4), text, font=font, fill=(0, 0, 0, 200), spacing=14, align="center")
+    draw.multiline_text((x_pos, y_pos), text, font=font, fill=random.choice(COLORS), spacing=14, align="center")
 
     # Elegant frame
     draw.rounded_rectangle(
-        (35, 135, 1245, 585),
-        radius=32,
-        outline=(255, 255, 255, 170),
+        (35, 130, 1245, 590),
+        radius=30,
+        outline=(255, 255, 255, 160),
         width=3
     )
 
     # Effects
-    draw_confetti(draw, count=random.randint(50, 85))
-    draw_sparkles(draw, count=random.randint(20, 35))
+    draw_confetti(draw, count=random.randint(45, 80))
+    draw_sparkles(draw, count=random.randint(18, 32))
 
     # Vignette
     img = apply_vignette(img)
@@ -134,26 +125,11 @@ def create_slide(text, background, duration, output_file):
     img = img.convert("RGB")
     img.save(output_file, quality=95)
 
-    # Create clip with stronger Ken Burns (zoom + slight movement)
+    # Ken Burns zoom
     clip = ImageClip(output_file).set_duration(duration)
-
-    zoom = random.uniform(1.10, 1.18)
-    
-    def make_frame(get_frame, t):
-        frame = get_frame(t)
-        # progressive zoom
-        scale = 1 + (zoom - 1) * (t / duration)
-        return frame  # MoviePy resize will handle it
-
+    zoom = random.uniform(1.09, 1.16)
     clip = clip.resize(lambda t: 1 + (zoom - 1) * t / duration)
-    
-    # Add slight position shift for more life
-    clip = clip.set_position(lambda t: (
-        int(-20 * (t / duration)),
-        int(-15 * (t / duration))
-    ))
-
-    clip = clip.fadein(1.3).fadeout(1.3)
+    clip = clip.fadein(1.2).fadeout(1.2)
 
     return clip
 
@@ -181,7 +157,23 @@ def create_video(name: str, message: str, audio_file: str):
         "videos": []
     }
 
-    slide_texts = [
+    clips = []
+
+    # ====================== 1. INTRO SLIDE ======================
+    intro_text = f"A Special Birthday Video\nFor\n{name}"
+    intro_bg = background_images[0]
+    used_files["images"].append(os.path.basename(intro_bg))
+
+    intro_clip = create_slide(
+        intro_text,
+        intro_bg,
+        9,
+        "generated/slide_intro.png"
+    )
+    clips.append(intro_clip)
+
+    # ====================== 2. MAIN SLIDES ======================
+    main_texts = [
         f"Happy Birthday\n{name}",
         "Wishing You\nAll the Happiness",
         message,
@@ -190,45 +182,56 @@ def create_video(name: str, message: str, audio_file: str):
         f"Cheers to You\n{name}",
         "Lots of Love\n& Best Wishes",
         "Have an Amazing\nBirthday!",
-        f"Thank You\n{name} 💖",
-        "Enjoy Your\nSpecial Day!"
     ]
 
-    clips = []
-    slide_duration = 16.5
-
-    for i, text in enumerate(slide_texts):
-        bg = background_images[i % len(background_images)]
+    for i, text in enumerate(main_texts):
+        bg = background_images[(i + 1) % len(background_images)]
         used_files["images"].append(os.path.basename(bg))
 
         slide = create_slide(
             text,
             bg,
-            slide_duration,
+            16,
             f"generated/slide_{i}.png"
         )
         clips.append(slide)
 
-    # Smooth crossfade transitions
-    final_clips = []
-    for i, clip in enumerate(clips):
-        if i == 0:
-            final_clips.append(clip)
-        else:
-            # Crossfade of 1.2 seconds
-            final_clips.append(clip.crossfadein(1.2))
+    # ====================== 3. END SLIDE ======================
+    end_text = (
+        f"Thank You for Watching!\n\n"
+        f"Please Like 👍  Share ❤️  & Comment\n"
+        f"Subscribe for more Birthday Videos\n\n"
+        f"Request Custom Video:\n"
+        f"https://hbdsongs.streamlit.app"          # ← Change this to your real link
+    )
 
-    base_video = concatenate_videoclips(final_clips, method="compose", padding=-1.2)
+    end_bg = background_images[-1]
+    used_files["images"].append(os.path.basename(end_bg))
+
+    end_clip = create_slide(
+        end_text,
+        end_bg,
+        15,
+        "generated/slide_end.png"
+    )
+    clips.append(end_clip)
+
+    # ====================== FINAL ASSEMBLY ======================
+    final_clips = [clips[0]]
+    for clip in clips[1:]:
+        final_clips.append(clip.crossfadein(1.1))
+
+    base_video = concatenate_videoclips(final_clips, method="compose", padding=-1.1)
 
     # Audio handling
     if audio.duration < base_video.duration:
         loops = int(base_video.duration // audio.duration) + 1
         audio = concatenate_audioclips([audio] * loops)
 
-    audio = audio.subclip(0, base_video.duration).audio_fadein(1.5).audio_fadeout(2)
+    audio = audio.subclip(0, base_video.duration).audio_fadein(1.5).audio_fadeout(2.5)
     base_video = base_video.set_audio(audio)
 
-    # Loop once for ~6 minutes
+    # Loop once → longer video
     final_video = concatenate_videoclips([base_video, base_video])
 
     safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
