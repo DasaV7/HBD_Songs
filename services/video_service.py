@@ -8,24 +8,27 @@ from moviepy.editor import (
     ImageClip,
     AudioFileClip,
     concatenate_videoclips,
-    concatenate_audioclips
+    concatenate_audioclips,
+    CompositeVideoClip,
+    vfx
 )
 
-from PIL import ImageDraw, ImageFont
+from PIL import ImageDraw, ImageFont, ImageFilter, ImageEnhance
 import random
 import os
-import math
+import numpy as np
 
 
 COLORS = [
     "#FF9AA2", "#FFDAC1", "#E2F0CB", "#B5EAD7",
     "#C7CEEA", "#A0C4FF", "#FFD6A5", "#FFB7B2",
-    "#FF8FAB", "#FDE4CF", "#FFD700", "#FF69B4"
+    "#FF8FAB", "#FDE4CF", "#FFD700", "#FF69B4",
+    "#FFE4E1", "#E6E6FA"
 ]
 
 FONT_CANDIDATES = [
-    "assets/fonts/Poppins-SemiBold.ttf",
     "assets/fonts/Poppins-Bold.ttf",
+    "assets/fonts/Poppins-SemiBold.ttf",
     "assets/fonts/Montserrat-Bold.ttf",
     "assets/fonts/Montserrat-SemiBold.ttf",
 ]
@@ -41,32 +44,43 @@ def get_media_files(folder, extensions):
     ]
 
 
-def draw_confetti(draw, width=1280, height=720, count=80):
-    """Draw simple colorful confetti particles"""
+def draw_confetti(draw, width=1280, height=720, count=70):
     for _ in range(count):
         x = random.randint(0, width)
         y = random.randint(0, height)
-        size = random.randint(4, 12)
+        size = random.randint(5, 14)
         color = random.choice(COLORS)
-        shape = random.choice(["rect", "circle"])
-
-        if shape == "rect":
-            draw.rectangle([x, y, x + size, y + size//2], fill=color)
+        if random.random() > 0.5:
+            draw.rectangle([x, y, x + size, y + size // 2], fill=color)
         else:
             draw.ellipse([x, y, x + size, y + size], fill=color)
 
 
-def draw_sparkles(draw, width=1280, height=720, count=25):
-    """Draw small sparkle/star effects"""
+def draw_sparkles(draw, width=1280, height=720, count=30):
     for _ in range(count):
-        x = random.randint(50, width - 50)
-        y = random.randint(50, height - 50)
-        size = random.randint(3, 7)
-        color = random.choice(["#FFD700", "#FFFFFF", "#FFE4B5"])
-        
-        # Simple cross sparkle
+        x = random.randint(40, width - 40)
+        y = random.randint(40, height - 40)
+        size = random.randint(4, 9)
+        color = random.choice(["#FFD700", "#FFFFFF", "#FFF8DC", "#FFE4B5"])
         draw.line([(x - size, y), (x + size, y)], fill=color, width=2)
         draw.line([(x, y - size), (x, y + size)], fill=color, width=2)
+        # small diagonal
+        draw.line([(x - size//2, y - size//2), (x + size//2, y + size//2)], fill=color, width=1)
+
+
+def apply_vignette(img):
+    """Add soft cinematic vignette"""
+    width, height = img.size
+    vignette = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(vignette)
+
+    for i in range(80):
+        alpha = int(i * 1.8)
+        draw.rectangle(
+            [i, i, width - i, height - i],
+            outline=(0, 0, 0, alpha)
+        )
+    return Image.alpha_composite(img.convert("RGBA"), vignette)
 
 
 def create_slide(text, background, duration, output_file):
@@ -74,56 +88,78 @@ def create_slide(text, background, duration, output_file):
     img = img.resize((1280, 720), Image.LANCZOS)
 
     # Soft dark overlay
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 95))
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 90))
     img = Image.alpha_composite(img, dark)
+
+    # Slight color enhancement
+    enhancer = ImageEnhance.Color(img)
+    img = enhancer.enhance(1.15)
 
     draw = ImageDraw.Draw(img)
 
-    # Load a random available font
+    # Load font
     font = None
     for fpath in FONT_CANDIDATES:
         try:
-            font = ImageFont.truetype(fpath, random.randint(64, 74))
+            font = ImageFont.truetype(fpath, random.randint(66, 76))
             break
         except:
             continue
     if font is None:
         font = ImageFont.load_default()
 
-    # Random text position (still readable)
-    x_pos = random.randint(60, 100)
-    y_pos = random.randint(200, 260)
+    # Text position
+    x_pos = random.randint(55, 95)
+    y_pos = random.randint(210, 270)
 
-    # Draw text with slight shadow for elegance
-    shadow_color = (0, 0, 0, 180)
-    draw.multiline_text((x_pos+3, y_pos+3), text, font=font, fill=shadow_color, spacing=14, align="center")
-    draw.multiline_text((x_pos, y_pos), text, font=font, fill=random.choice(COLORS), spacing=14, align="center")
+    # Soft text shadow
+    draw.multiline_text((x_pos + 4, y_pos + 4), text, font=font, fill=(0, 0, 0, 200), spacing=15, align="center")
+    draw.multiline_text((x_pos, y_pos), text, font=font, fill=random.choice(COLORS), spacing=15, align="center")
 
     # Elegant frame
     draw.rounded_rectangle(
-        (40, 140, 1240, 580),
-        radius=28,
-        outline=(255, 255, 255, 160),
+        (35, 135, 1245, 585),
+        radius=32,
+        outline=(255, 255, 255, 170),
         width=3
     )
 
-    # Programmatic confetti + sparkles (elegant, not too much)
-    draw_confetti(draw, count=random.randint(40, 70))
-    draw_sparkles(draw, count=random.randint(15, 25))
+    # Effects
+    draw_confetti(draw, count=random.randint(50, 85))
+    draw_sparkles(draw, count=random.randint(20, 35))
+
+    # Vignette
+    img = apply_vignette(img)
 
     img = img.convert("RGB")
     img.save(output_file, quality=95)
 
-    # Ken Burns slow zoom
+    # Create clip with stronger Ken Burns (zoom + slight movement)
     clip = ImageClip(output_file).set_duration(duration)
-    zoom_factor = random.uniform(1.07, 1.14)
-    clip = clip.resize(lambda t: 1 + (zoom_factor - 1) * t / duration)
-    clip = clip.fadein(1.1).fadeout(1.1)
+
+    zoom = random.uniform(1.10, 1.18)
+    
+    def make_frame(get_frame, t):
+        frame = get_frame(t)
+        # progressive zoom
+        scale = 1 + (zoom - 1) * (t / duration)
+        return frame  # MoviePy resize will handle it
+
+    clip = clip.resize(lambda t: 1 + (zoom - 1) * t / duration)
+    
+    # Add slight position shift for more life
+    clip = clip.set_position(lambda t: (
+        int(-20 * (t / duration)),
+        int(-15 * (t / duration))
+    ))
+
+    clip = clip.fadein(1.3).fadeout(1.3)
 
     return clip
 
 
 def create_video(name: str, message: str, audio_file: str):
+    # Clean previous slides
     for f in os.listdir("generated"):
         if f.startswith("slide"):
             try:
@@ -159,24 +195,40 @@ def create_video(name: str, message: str, audio_file: str):
     ]
 
     clips = []
-    slide_duration = 17
+    slide_duration = 16.5
 
     for i, text in enumerate(slide_texts):
         bg = background_images[i % len(background_images)]
         used_files["images"].append(os.path.basename(bg))
 
-        slide = create_slide(text, bg, slide_duration, f"generated/slide_{i}.png")
+        slide = create_slide(
+            text,
+            bg,
+            slide_duration,
+            f"generated/slide_{i}.png"
+        )
         clips.append(slide)
 
-    base_video = concatenate_videoclips(clips, method="compose")
+    # Smooth crossfade transitions
+    final_clips = []
+    for i, clip in enumerate(clips):
+        if i == 0:
+            final_clips.append(clip)
+        else:
+            # Crossfade of 1.2 seconds
+            final_clips.append(clip.crossfadein(1.2))
 
+    base_video = concatenate_videoclips(final_clips, method="compose", padding=-1.2)
+
+    # Audio handling
     if audio.duration < base_video.duration:
         loops = int(base_video.duration // audio.duration) + 1
         audio = concatenate_audioclips([audio] * loops)
 
-    audio = audio.subclip(0, base_video.duration)
+    audio = audio.subclip(0, base_video.duration).audio_fadein(1.5).audio_fadeout(2)
     base_video = base_video.set_audio(audio)
 
+    # Loop once for ~6 minutes
     final_video = concatenate_videoclips([base_video, base_video])
 
     safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
