@@ -52,7 +52,7 @@ with col2:
         index=0
     )
 
-st.info("Message format that will be used: **Happy Birthday {name}!**")
+st.info("Message format used: **Happy Birthday {name}!**")
 
 # ====================== CONTROL BUTTONS ======================
 col_a, col_b, col_c = st.columns(3)
@@ -64,7 +64,7 @@ with col_b:
     if st.button("🛑 Stop Batch"):
         st.session_state.stop_batch = True
         st.session_state.batch_running = False
-        st.warning("Stopping batch after current video...")
+        st.warning("Stopping batch after current video finishes...")
 
 with col_c:
     if st.button("🗑️ Clear All"):
@@ -112,26 +112,26 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
     st.markdown(f"### Processing {idx + 1} of {len(names)}: `{current_name}`")
     st.progress(idx / len(names))
 
-    # Show previous video while generating
+    # Show previous video while generating next one
     if st.session_state.current_video and os.path.exists(st.session_state.current_video):
         st.markdown("#### ▶️ Previous Video (still playing)")
         st.video(st.session_state.current_video)
-        st.caption("Keep watching while the next video is generating...")
+        st.caption("You can keep watching while the next video is being generated...")
 
     status = st.empty()
 
     try:
-        # Generate video
+        # Generate
         status.info(f"🔄 Generating video for **{current_name}**...")
 
         lyrics = generate_lyrics(current_name, personalized_message)
         audio_file = f"generated/{current_name}.mp3"
         asyncio.run(generate_audio(lyrics, audio_file))
-        time.sleep(0.3)
+        time.sleep(0.4)
 
         video_path, used_files = create_video(current_name, personalized_message, audio_file)
 
-        # Upload only if enabled
+        # Upload (if enabled)
         link = None
         if st.session_state.get("auto_upload", True):
             status.info(f"📤 Uploading **{current_name}** to YouTube...")
@@ -142,7 +142,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                     personalized_message,
                     name=current_name
                 )
-                upload_status = "✅ Uploaded successfully"
+                upload_status = "✅ Uploaded successfully + Thumbnail + Playlists"
             except Exception as e:
                 upload_status = f"❌ Upload failed: {str(e)}"
         else:
@@ -160,7 +160,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         st.session_state.current_video = video_path
         st.session_state.batch_index += 1
 
-        # Show new video + countdown
+        # Show new video + 10 second countdown
         status.success(f"✅ Video ready: **{current_name}**")
         st.video(video_path)
         st.write(upload_status)
@@ -169,14 +169,14 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         for sec in range(10, 0, -1):
             if st.session_state.stop_batch:
                 break
-            countdown.warning(f"⏱ Next video in **{sec}** seconds...")
+            countdown.warning(f"⏱ Next video in **{sec}** seconds... (Click Stop Batch to cancel)")
             time.sleep(1)
 
         countdown.empty()
         st.rerun()
 
     except Exception as e:
-        st.error(f"❌ Error on {current_name}: {e}")
+        st.error(f"❌ Error processing {current_name}: {e}")
         st.session_state.batch_running = False
 
 # ====================== RESULTS ======================
