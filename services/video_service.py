@@ -191,25 +191,25 @@ def create_video(name: str, message: str, audio_file: str):
         "generated/slide_end.png"
     )
     clips.append(end_clip)
-    # ====================== 3. END SLIDE ======================
-    end_text = (
-        f"Thank You for Watching!\n\n"
-        f"Please Like 👍  Share ❤️  & Comment\n"
-        f"Subscribe for more Birthday Videos\n\n"
-        f"Request Custom Video:\n"
-        f"https://hbdsongs.streamlit.app"          # ← Change this to your real link
-    )
+    # # ====================== 3. END SLIDE ======================
+    # end_text = (
+    #     f"Thank You for Watching!\n\n"
+    #     f"Please Like 👍  Share ❤️  & Comment\n"
+    #     f"Subscribe for more Birthday Videos\n\n"
+    #     f"Request Custom Video:\n"
+    #     f"https://hbdsongs.streamlit.app"          # ← Change this to your real link
+    # )
 
-    end_bg = background_images[-1]
-    used_files["images"].append(os.path.basename(end_bg))
+    # end_bg = background_images[-1]
+    # used_files["images"].append(os.path.basename(end_bg))
 
-    end_clip = create_slide(
-        end_text,
-        end_bg,
-        15,
-        "generated/slide_end.png"
-    )
-    clips.append(end_clip)
+    # end_clip = create_slide(
+    #     end_text,
+    #     end_bg,
+    #     15,
+    #     "generated/slide_end.png"
+    # )
+    # clips.append(end_clip)
 
     # ====================== FINAL ASSEMBLY ======================
     final_clips = [clips[0]]
