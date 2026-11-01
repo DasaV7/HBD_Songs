@@ -88,36 +88,61 @@ def create_slide(text, background, duration, output_file):
 
     draw = ImageDraw.Draw(img)
 
+    # ===== SMART FONT SIZE =====
+    # Smaller font for End slide (long text), normal size for other slides
+    if "Thank You for Watching" in text or "Subscribe" in text:
+        font_size = 52
+    else:
+        font_size = random.randint(64, 74)
+
     # Load font
     font = None
     for fpath in FONT_CANDIDATES:
         try:
-            font = ImageFont.truetype(fpath, random.randint(62, 74))
+            font = ImageFont.truetype(fpath, font_size)
             break
         except:
             continue
     if font is None:
         font = ImageFont.load_default()
 
-    # Text position
-    x_pos = random.randint(50, 90)
-    y_pos = random.randint(180, 260)
+    # Text position (slightly higher for end slide)
+    if "Thank You for Watching" in text:
+        x_pos = 60
+        y_pos = 160
+    else:
+        x_pos = random.randint(50, 90)
+        y_pos = random.randint(190, 260)
 
     # Soft shadow
-    draw.multiline_text((x_pos + 4, y_pos + 4), text, font=font, fill=(0, 0, 0, 200), spacing=14, align="center")
-    draw.multiline_text((x_pos, y_pos), text, font=font, fill=random.choice(COLORS), spacing=14, align="center")
+    draw.multiline_text(
+        (x_pos + 4, y_pos + 4),
+        text,
+        font=font,
+        fill=(0, 0, 0, 200),
+        spacing=13,
+        align="center"
+    )
+    draw.multiline_text(
+        (x_pos, y_pos),
+        text,
+        font=font,
+        fill=random.choice(COLORS),
+        spacing=13,
+        align="center"
+    )
 
     # Elegant frame
     draw.rounded_rectangle(
-        (35, 130, 1245, 590),
+        (35, 120, 1245, 600),
         radius=30,
         outline=(255, 255, 255, 160),
         width=3
     )
 
     # Effects
-    draw_confetti(draw, count=random.randint(45, 80))
-    draw_sparkles(draw, count=random.randint(18, 32))
+    draw_confetti(draw, count=random.randint(40, 75))
+    draw_sparkles(draw, count=random.randint(15, 28))
 
     # Vignette
     img = apply_vignette(img)
@@ -127,7 +152,7 @@ def create_slide(text, background, duration, output_file):
 
     # Ken Burns zoom
     clip = ImageClip(output_file).set_duration(duration)
-    zoom = random.uniform(1.09, 1.16)
+    zoom = random.uniform(1.08, 1.15)
     clip = clip.resize(lambda t: 1 + (zoom - 1) * t / duration)
     clip = clip.fadein(1.2).fadeout(1.2)
 
