@@ -37,13 +37,6 @@ st.markdown("""
         border-radius: 8px;
         font-weight: 600;
     }
-    .status-box {
-        padding: 1rem;
-        border-radius: 10px;
-        background-color: #1e1e2f;
-        border: 1px solid #333;
-        margin-bottom: 1rem;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -75,13 +68,23 @@ with st.container():
         label_visibility="collapsed"
     )
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
+
     with col1:
         max_videos = st.selectbox("Number of videos", [5, 10], index=0)
+
     with col2:
         auto_upload = st.selectbox("Auto Upload to YouTube", ["Enabled", "Disabled"], index=0)
 
-    st.caption("Message format: **Happy Birthday {name}!**")
+    with col3:
+        repeats = st.selectbox(
+            "Video Length Multiplier",
+            options=[1, 2, 3, 4, 5],
+            index=0,
+            help="1x ≈ 2.5 min | 2x ≈ 5 min | 3x ≈ 7.5 min | 4x ≈ 10 min | 5x ≈ 12.5 min"
+        )
+
+    st.caption("Message format: **Happy Birthday {name}!**  |  End slide appears only once at the very end")
 
 st.markdown("---")
 
@@ -123,6 +126,7 @@ if start_btn:
     st.session_state.stop_batch = False
     st.session_state.current_video = None
     st.session_state.auto_upload = (auto_upload == "Enabled")
+    st.session_state.repeats = repeats
     st.rerun()
 
 # ====================== BATCH PROCESSING ======================
@@ -139,11 +143,12 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
 
     current_name = names[idx]
     personalized_message = f"Happy Birthday {current_name}!"
+    current_repeats = st.session_state.get("repeats", 1)
 
     # Progress Header
     st.markdown(f"### Processing {idx + 1} of {len(names)}")
-    st.markdown(f"**Current Name:** `{current_name}`")
-    
+    st.markdown(f"**Current Name:** `{current_name}`  |  **Length:** {current_repeats}x")
+
     progress_value = idx / len(names)
     st.progress(progress_value, text=f"{int(progress_value * 100)}% completed")
 
@@ -153,11 +158,9 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
             st.video(st.session_state.current_video)
             st.caption("Keep watching while the next video is generating...")
 
-    status = st.empty()
-
     try:
         # Generate
-        with st.status(f"Generating video for **{current_name}**...", expanded=True) as s:
+        with st.status(f"Generating video for **{current_name}** ({current_repeats}x)...", expanded=True) as s:
             st.write("Creating lyrics & audio...")
             lyrics = generate_lyrics(current_name, personalized_message)
             audio_file = f"generated/{current_name}.mp3"
@@ -165,7 +168,12 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
             time.sleep(0.3)
 
             st.write("Rendering video with effects...")
-            video_path, used_files = create_video(current_name, personalized_message, audio_file)
+            video_path, used_files = create_video(
+                current_name,
+                personalized_message,
+                audio_file,
+                repeats=current_repeats
+            )
             s.update(label="Video generated successfully!", state="complete")
 
         # Upload
@@ -193,14 +201,15 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
             "video_path": video_path,
             "link": link,
             "status": upload_status,
-            "used_files": used_files
+            "used_files": used_files,
+            "repeats": current_repeats
         }
         st.session_state.batch_results.append(result)
         st.session_state.current_video = video_path
         st.session_state.batch_index += 1
 
         # Show new video
-        st.success(f"Video ready for **{current_name}**")
+        st.success(f"Video ready for **{current_name}** ({current_repeats}x)")
         st.video(video_path)
         st.info(upload_status)
 
@@ -225,7 +234,7 @@ if st.session_state.batch_results:
     st.markdown("### 📋 Batch Results")
 
     for res in reversed(st.session_state.batch_results):
-        with st.expander(f"**{res['name']}** — {res['status']}", expanded=False):
+        with st.expander(f"**{res['name']}** — {res['status']} (×{res.get('repeats', 1)})", expanded=False):
             if res["video_path"] and os.path.exists(res["video_path"]):
                 st.video(res["video_path"])
             if res.get("link"):
