@@ -146,10 +146,10 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     # ---------- END SLIDE (only once) ----------
     end_text = (
         "Thank You for Watching!\n\n"
-        "Please Like 👍  Share ❤️\n"
-        "Comment & Subscribe\n\n"
+        "Please Like • Share • Comment\n"
+        "And Subscribe for more videos\n\n"
         "Request Custom Video:\n"
-        "yourwebsite.com/custom"
+        "https://hbdsongs.streamlit.app"
     )
     end_clip = create_slide(end_text, background_images[-1], 14, "generated/slide_end.png", is_end=True)
     used_files["images"].append(os.path.basename(background_images[-1]))
