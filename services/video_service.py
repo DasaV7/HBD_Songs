@@ -198,11 +198,11 @@ def create_video(name: str, message: str, audio_file: str):
 
     # ====================== 3. END SLIDE ======================
     end_text = (
-        f"Thank You for Watching!\n\n"
-        f"Please Like 👍  Share ❤️  & Comment\n"
-        f"Subscribe for more Birthday Videos\n\n"
-        f"Request Custom Video:\n"
-        f"https://hbdsongs.streamlit.app"          # ← https://hbdsongs.streamlit.app Change this to your real link
+        "Thank You for Watching!\n\n"
+        "Please Like 👍   Share ❤️\n"
+        "Comment & Subscribe\n\n"
+        "Request Custom Video:\n"
+        "https://hbdsongs.streamlit.app"
     )
 
     end_bg = background_images[-1]
@@ -211,7 +211,7 @@ def create_video(name: str, message: str, audio_file: str):
     end_clip = create_slide(
         end_text,
         end_bg,
-        15,
+        18,                          # Longer duration so it’s clearly visible
         "generated/slide_end.png"
     )
     clips.append(end_clip)
