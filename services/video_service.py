@@ -231,4 +231,3 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     audio.close()
 
     return output_path, used_files
-    
