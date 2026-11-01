@@ -172,13 +172,37 @@ def create_video(name: str, message: str, audio_file: str):
     )
     clips.append(intro_clip)
 
+    # ====================== 2. MAIN SLIDES ======================
+    main_texts = [
+        f"Happy Birthday\n{name}",
+        "Wishing You\nAll the Happiness",
+        message,
+        "May Your Day\nBe Filled with Joy",
+        "Celebrate in\nStyle Today!",
+        f"Cheers to You\n{name}",
+        "Lots of Love\n& Best Wishes",
+        "Have an Amazing\nBirthday!",
+    ]
+
+    for i, text in enumerate(main_texts):
+        bg = background_images[(i + 1) % len(background_images)]
+        used_files["images"].append(os.path.basename(bg))
+
+        slide = create_slide(
+            text,
+            bg,
+            16,
+            f"generated/slide_{i}.png"
+        )
+        clips.append(slide)
+
     # ====================== 3. END SLIDE ======================
     end_text = (
-        "Thank You for Watching!\n\n"
-        "Please Like 👍   Share ❤️\n"
-        "Comment & Subscribe\n\n"
-        "Request Custom Video:\n"
-        "yourwebsite.com/custom"
+        f"Thank You for Watching!\n\n"
+        f"Please Like 👍  Share ❤️  & Comment\n"
+        f"Subscribe for more Birthday Videos\n\n"
+        f"Request Custom Video:\n"
+        f"https://hbdsongs.streamlit.app"          # ← https://hbdsongs.streamlit.app Change this to your real link
     )
 
     end_bg = background_images[-1]
@@ -187,29 +211,10 @@ def create_video(name: str, message: str, audio_file: str):
     end_clip = create_slide(
         end_text,
         end_bg,
-        18,                          # Longer duration so it’s clearly visible
+        15,
         "generated/slide_end.png"
     )
     clips.append(end_clip)
-    # # ====================== 3. END SLIDE ======================
-    # end_text = (
-    #     f"Thank You for Watching!\n\n"
-    #     f"Please Like 👍  Share ❤️  & Comment\n"
-    #     f"Subscribe for more Birthday Videos\n\n"
-    #     f"Request Custom Video:\n"
-    #     f"https://hbdsongs.streamlit.app"          # ← Change this to your real link
-    # )
-
-    # end_bg = background_images[-1]
-    # used_files["images"].append(os.path.basename(end_bg))
-
-    # end_clip = create_slide(
-    #     end_text,
-    #     end_bg,
-    #     15,
-    #     "generated/slide_end.png"
-    # )
-    # clips.append(end_clip)
 
     # ====================== FINAL ASSEMBLY ======================
     final_clips = [clips[0]]
