@@ -19,14 +19,13 @@ import os
 COLORS = [
     "#FF9AA2", "#FFDAC1", "#E2F0CB", "#B5EAD7",
     "#C7CEEA", "#A0C4FF", "#FFD6A5", "#FFB7B2",
-    "#FF8FAB", "#FDE4CF", "#FFD700", "#FF69B4"
+    "#FFD700", "#FF69B4"
 ]
 
 FONT_CANDIDATES = [
     "assets/fonts/Poppins-Bold.ttf",
     "assets/fonts/Poppins-SemiBold.ttf",
     "assets/fonts/Montserrat-Bold.ttf",
-    "assets/fonts/Montserrat-SemiBold.ttf",
 ]
 
 
@@ -40,58 +39,23 @@ def get_media_files(folder, extensions):
     ]
 
 
-def draw_confetti(draw, width=1280, height=720, count=60):
-    for _ in range(count):
-        x = random.randint(0, width)
-        y = random.randint(0, height)
-        size = random.randint(5, 12)
-        color = random.choice(COLORS)
-        if random.random() > 0.5:
-            draw.rectangle([x, y, x + size, y + size // 2], fill=color)
-        else:
-            draw.ellipse([x, y, x + size, y + size], fill=color)
-
-
-def draw_sparkles(draw, width=1280, height=720, count=25):
-    for _ in range(count):
-        x = random.randint(40, width - 40)
-        y = random.randint(40, height - 40)
-        size = random.randint(4, 8)
-        color = random.choice(["#FFD700", "#FFFFFF", "#FFF8DC"])
-        draw.line([(x - size, y), (x + size, y)], fill=color, width=2)
-        draw.line([(x, y - size), (x, y + size)], fill=color, width=2)
-
-
-def apply_vignette(img):
-    width, height = img.size
-    vignette = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(vignette)
-    for i in range(60):
-        alpha = int(i * 1.5)
-        draw.rectangle([i, i, width - i, height - i], outline=(0, 0, 0, alpha))
-    return Image.alpha_composite(img.convert("RGBA"), vignette)
-
-
-def create_slide(text, background, duration, output_file):
+def create_slide(text, background, duration, output_file, is_end=False):
     img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 95))
+    # Dark overlay
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 100))
     img = Image.alpha_composite(img, dark)
-
-    enhancer = ImageEnhance.Color(img)
-    img = enhancer.enhance(1.12)
 
     draw = ImageDraw.Draw(img)
 
-    # Smart font size
-    if "Thank You for Watching" in text or "Subscribe" in text:
-        font_size = 50
-        x_pos, y_pos = 55, 150
+    # Font size
+    if is_end:
+        font_size = 48
+        y_pos = 160
     else:
-        font_size = random.randint(64, 72)
-        x_pos = random.randint(50, 90)
-        y_pos = random.randint(200, 260)
+        font_size = 68
+        y_pos = 230
 
     font = None
     for fpath in FONT_CANDIDATES:
@@ -103,38 +67,30 @@ def create_slide(text, background, duration, output_file):
     if font is None:
         font = ImageFont.load_default()
 
-    # Shadow + Text
-    draw.multiline_text((x_pos + 3, y_pos + 3), text, font=font, fill=(0, 0, 0, 200), spacing=12, align="center")
+    # Text with shadow
+    x_pos = 60
+    draw.multiline_text((x_pos+3, y_pos+3), text, font=font, fill=(0,0,0,180), spacing=12, align="center")
     draw.multiline_text((x_pos, y_pos), text, font=font, fill=random.choice(COLORS), spacing=12, align="center")
 
     # Frame
-    draw.rounded_rectangle((30, 120, 1250, 600), radius=28, outline=(255, 255, 255, 160), width=3)
+    draw.rounded_rectangle((40, 140, 1240, 580), radius=25, outline=(255,255,255,150), width=3)
 
-    draw_confetti(draw, count=random.randint(40, 70))
-    draw_sparkles(draw, count=random.randint(15, 25))
-
-    img = apply_vignette(img)
     img = img.convert("RGB")
-    img.save(output_file, quality=95)
+    img.save(output_file, quality=90)
 
-    clip = ImageClip(output_file).set_duration(duration)
-    zoom = random.uniform(1.08, 1.14)
-    clip = clip.resize(lambda t: 1 + (zoom - 1) * t / duration)
-    clip = clip.fadein(1.0).fadeout(1.0)
-
+    clip = (ImageClip(output_file)
+            .set_duration(duration)
+            .fadein(0.8)
+            .fadeout(0.8))
     return clip
 
 
 def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
-    """
-    repeats: 1 to 5
-    End slide is added only once at the very end.
-    """
     repeats = max(1, min(5, int(repeats)))
 
-    # Clean old slides
+    # Clean old files
     for f in os.listdir("generated"):
-        if f.startswith("slide"):
+        if f.startswith("slide") or f.endswith(".mp4"):
             try:
                 os.remove(os.path.join("generated", f))
             except:
@@ -144,7 +100,7 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     background_images = get_media_files("assets/backgrounds", (".jpg", ".jpeg", ".png"))
 
     if len(background_images) < 5:
-        raise Exception("Need at least 5 images in assets/backgrounds")
+        raise Exception("Need at least 5 background images")
 
     random.shuffle(background_images)
 
@@ -154,60 +110,59 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
         "videos": []
     }
 
-    # ---------- BUILD ONE BASE CYCLE (Intro + Main slides) ----------
+    # ---------- BASE CONTENT ----------
     base_clips = []
 
-    # Intro
+    # 1. Intro
     intro_text = f"A Special Birthday Video\nFor\n{name}"
-    intro_bg = background_images[0]
-    used_files["images"].append(os.path.basename(intro_bg))
-    base_clips.append(create_slide(intro_text, intro_bg, 8, "generated/slide_intro.png"))
+    base_clips.append(create_slide(intro_text, background_images[0], 7, "generated/slide_intro.png"))
+    used_files["images"].append(os.path.basename(background_images[0]))
 
-    # Main slides
+    # 2. Main slides
     main_texts = [
         f"Happy Birthday\n{name}",
         "Wishing You\nAll the Happiness",
         message,
-        "May Your Day\nBe Filled with Joy",
-        "Celebrate in\nStyle Today!",
+        "May Your Day\nBe Full of Joy",
+        "Celebrate Your\nSpecial Day!",
         f"Cheers to You\n{name}",
-        "Lots of Love\n& Best Wishes",
-        "Have an Amazing\nBirthday!",
+        "Lots of Love &\nBest Wishes",
+        "Have an Amazing\nBirthday!"
     ]
 
     for i, text in enumerate(main_texts):
         bg = background_images[(i + 1) % len(background_images)]
         used_files["images"].append(os.path.basename(bg))
-        base_clips.append(create_slide(text, bg, 15, f"generated/slide_{i}.png"))
+        base_clips.append(create_slide(text, bg, 12, f"generated/slide_{i}.png"))
 
     base_video = concatenate_videoclips(base_clips, method="compose")
 
-    # ---------- REPEAT THE BASE VIDEO ----------
-    repeated_clips = [base_video] * repeats
-    main_part = concatenate_videoclips(repeated_clips, method="compose")
+    # ---------- REPEAT ----------
+    if repeats > 1:
+        main_part = concatenate_videoclips([base_video] * repeats, method="compose")
+    else:
+        main_part = base_video
 
-    # ---------- END SLIDE (only once at the end) ----------
+    # ---------- END SLIDE (only once) ----------
     end_text = (
         "Thank You for Watching!\n\n"
         "Please Like 👍  Share ❤️\n"
         "Comment & Subscribe\n\n"
         "Request Custom Video:\n"
-        "yourwebsite.com/custom"          # ← Change this
+        "yourwebsite.com/custom"
     )
-    end_bg = background_images[-1]
-    used_files["images"].append(os.path.basename(end_bg))
-    end_clip = create_slide(end_text, end_bg, 16, "generated/slide_end.png")
+    end_clip = create_slide(end_text, background_images[-1], 14, "generated/slide_end.png", is_end=True)
+    used_files["images"].append(os.path.basename(background_images[-1]))
 
-    # Final video = repeated content + end slide
     final_video = concatenate_videoclips([main_part, end_clip], method="compose")
 
     # ---------- AUDIO ----------
     total_duration = final_video.duration
     if audio.duration < total_duration:
-        loops = int(total_duration // audio.duration) + 1
+        loops = int(total_duration / audio.duration) + 1
         audio = concatenate_audioclips([audio] * loops)
 
-    audio = audio.subclip(0, total_duration).audio_fadein(1.2).audio_fadeout(2.0)
+    audio = audio.subclip(0, total_duration)
     final_video = final_video.set_audio(audio)
 
     # ---------- EXPORT ----------
@@ -219,12 +174,11 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
         fps=24,
         codec="libx264",
         audio_codec="aac",
-        temp_audiofile="generated/temp_audio.m4a",
+        temp_audiofile="generated/temp-audio.m4a",
         remove_temp=True,
-        threads=4,
+        threads=2,
         logger=None,
-        preset="medium",
-        ffmpeg_params=["-movflags", "+faststart"]
+        preset="ultrafast"          # Much faster
     )
 
     final_video.close()
