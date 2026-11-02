@@ -1,0 +1,50 @@
+name: Daily Birthday Videos
+
+on:
+  schedule:
+    # Runs every day at 09:00 UTC (change as needed)
+    - cron: '0 9 * * *'
+  workflow_dispatch:  # Allows manual trigger from GitHub
+
+jobs:
+  generate-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsm6 libxext6
+
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install schedule
+
+      - name: Create generated folder
+        run: mkdir -p generated
+
+      - name: Run Daily Pipeline
+        env:
+          # You will add these as GitHub Secrets
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python -c "from video_pipeline import run_pipeline result = run_pipeline(count=2, repeats=1, delay_minutes=25, auto_upload=True) print(result)"
+
+      - name: Upload log as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-log
+          path: pipeline_log.txt
+          if-no-files-found: ignore
