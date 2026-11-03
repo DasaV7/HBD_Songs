@@ -53,10 +53,7 @@ def load_names(filepath):
 
 def save_names(filepath, names):
     with open(filepath, "w", encoding="utf-8") as f:
-        f.write("\n".join(names))
-
-def get_today_str():
-    return datetime.now().strftime("%Y-%m-%d")
+        f.write("\n".join(names) + ("\n" if names else ""))
 
 def get_now_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -66,23 +63,23 @@ def initialize_name_files():
         master = load_names("birthday_names.txt")
         if master:
             save_names("remaining_names.txt", master)
-            st.toast("Initialized remaining_names.txt from master list")
 
 def select_today_names(count=2):
     remaining = load_names("remaining_names.txt")
-    if len(remaining) < count:
-        st.warning(f"Only {len(remaining)} names left in remaining_names.txt")
-        selected = remaining
-    else:
-        selected = remaining[:count]
+    if not remaining:
+        return []
+    selected = remaining[:count]
     save_names("today_names.txt", selected)
     return selected
 
-def mark_names_as_done(completed_names):
+def remove_name_from_remaining(name):
+    """Remove a single name immediately after successful upload"""
     remaining = load_names("remaining_names.txt")
-    updated = [n for n in remaining if n not in completed_names]
-    save_names("remaining_names.txt", updated)
-    return updated
+    if name in remaining:
+        remaining.remove(name)
+        save_names("remaining_names.txt", remaining)
+        return True
+    return False
 
 # ====================== SESSION STATE ======================
 if "batch_running" not in st.session_state:
@@ -225,31 +222,25 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
     is_daily = st.session_state.get("is_daily_mode", False)
 
     if idx >= len(names):
-        # ===== FINISHED =====
-        if is_daily:
-            completed = [r["name"] for r in st.session_state.batch_results if "Uploaded" in r.get("status", "")]
-            if completed:
-                mark_names_as_done(completed)
-            
-            st.success(f"""
-            ### Daily Batch Completed Successfully!
-            
-            - Videos processed: **{len(st.session_state.batch_results)}**
-            - Successfully uploaded: **{len(completed)}**
-            - Names removed from remaining list: **{len(completed)}**
-            - Remaining names now: **{len(load_names('remaining_names.txt'))}**
-            """)
-            st.balloons()
-        
         st.session_state.batch_running = False
         st.session_state.is_daily_mode = False
+        
+        uploaded_count = sum(1 for r in st.session_state.batch_results if "Uploaded successfully" in r.get("status", ""))
+        
+        st.success(f"""
+        ### Batch Completed
+        - Total processed: **{len(st.session_state.batch_results)}**
+        - Successfully uploaded: **{uploaded_count}**
+        - Remaining names now: **{len(load_names('remaining_names.txt'))}**
+        """)
+        st.balloons()
         st.rerun()
 
     current_name = names[idx]
     personalized_message = f"Happy Birthday {current_name}!"
 
     st.markdown(f"### Processing {idx + 1} of {len(names)}: `{current_name}`")
-    st.progress((idx) / len(names))
+    st.progress(idx / max(len(names), 1))
 
     if st.session_state.current_video and os.path.exists(st.session_state.current_video):
         with st.expander("Previous Video", expanded=False):
@@ -260,7 +251,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
             lyrics = generate_lyrics(current_name, personalized_message)
             audio_file = f"generated/{current_name}.mp3"
             asyncio.run(generate_audio(lyrics, audio_file))
-            time.sleep(0.3)
+            time.sleep(0.4)
 
             video_path, used_files = create_video(
                 current_name,
@@ -273,7 +264,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         # Upload
         link = None
         upload_status = "⏸️ Skipped"
-        upload_time = None
+        upload_time = get_now_str()
 
         if st.session_state.get("auto_upload", True):
             with st.status("Uploading to YouTube...", expanded=True) as s:
@@ -286,18 +277,22 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                     )
                     upload_status = "✅ Uploaded successfully"
                     upload_time = get_now_str()
-                    s.update(label="Uploaded", state="complete")
+                    
+                    # ★★★ IMPORTANT: Remove name immediately after success ★★★
+                    remove_name_from_remaining(current_name)
+                    
+                    s.update(label="Uploaded + Name removed from remaining list", state="complete")
                 except Exception as e:
                     upload_status = f"❌ Upload failed: {e}"
                     s.update(label="Upload failed", state="error")
 
-        # Save result with timestamp
+        # Save result
         result = {
             "name": current_name,
             "video_path": video_path,
             "link": link,
             "status": upload_status,
-            "upload_time": upload_time or get_now_str()
+            "upload_time": upload_time
         }
         st.session_state.batch_results.append(result)
         st.session_state.current_video = video_path
@@ -307,10 +302,10 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         st.video(video_path)
         st.write(upload_status)
 
-        # Delay between videos
+        # Delay between videos only if more names remain
         if is_daily and idx + 1 < len(names):
-            delay = st.session_state.get("delay_minutes", 30) * 60
-            st.warning(f"Waiting {st.session_state.get('delay_minutes', 30)} minutes before next video...")
+            delay = st.session_state.get("delay_minutes", 15) * 60
+            st.warning(f"Waiting {st.session_state.get('delay_minutes', 15)} minutes before next video...")
             time.sleep(delay)
 
         time.sleep(1.5)
@@ -318,7 +313,20 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
 
     except Exception as e:
         st.error(f"Error on {current_name}: {e}")
-        st.session_state.batch_running = False
+        
+        # Save the error result so we don't lose progress
+        result = {
+            "name": current_name,
+            "video_path": None,
+            "link": None,
+            "status": f"❌ Error: {str(e)}",
+            "upload_time": get_now_str()
+        }
+        st.session_state.batch_results.append(result)
+        st.session_state.batch_index += 1   # Move to next name even on error
+        
+        time.sleep(3)
+        st.rerun()
 
 # ====================== RESULTS TABLE ======================
 if st.session_state.batch_results:
