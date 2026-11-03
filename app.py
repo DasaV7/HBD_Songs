@@ -2,7 +2,7 @@ import streamlit as st
 import asyncio
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from services.lyrics_service import generate_lyrics
 from services.audio_service import generate_audio
@@ -16,7 +16,7 @@ st.set_page_config(
     page_title="Birthday Video Generator | Batch Studio",
     page_icon="🎂",
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # ====================== CUSTOM CSS ======================
@@ -42,7 +42,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-title">🎂 Birthday Video Generator</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Batch Studio + Daily Auto Scheduler</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Batch Studio + Daily Auto Mode</div>', unsafe_allow_html=True)
 
 # ====================== HELPER FUNCTIONS ======================
 def load_names(filepath):
@@ -58,8 +58,10 @@ def save_names(filepath, names):
 def get_today_str():
     return datetime.now().strftime("%Y-%m-%d")
 
+def get_now_str():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def initialize_name_files():
-    """Create remaining_names.txt from master list if it doesn't exist"""
     if not os.path.exists("remaining_names.txt"):
         master = load_names("birthday_names.txt")
         if master:
@@ -67,20 +69,16 @@ def initialize_name_files():
             st.toast("Initialized remaining_names.txt from master list")
 
 def select_today_names(count=2):
-    """Select next names for today and save to today_names.txt"""
     remaining = load_names("remaining_names.txt")
-    
     if len(remaining) < count:
         st.warning(f"Only {len(remaining)} names left in remaining_names.txt")
         selected = remaining
     else:
         selected = remaining[:count]
-    
     save_names("today_names.txt", selected)
     return selected
 
 def mark_names_as_done(completed_names):
-    """Remove successfully uploaded names from remaining_names.txt"""
     remaining = load_names("remaining_names.txt")
     updated = [n for n in remaining if n not in completed_names]
     save_names("remaining_names.txt", updated)
@@ -100,10 +98,9 @@ if "current_video" not in st.session_state:
 if "stop_batch" not in st.session_state:
     st.session_state.stop_batch = False
 
-# Initialize files
 initialize_name_files()
 
-# ====================== SIDEBAR - NAME MANAGEMENT ======================
+# ====================== SIDEBAR ======================
 with st.sidebar:
     st.header("📋 Name Lists")
     
@@ -130,15 +127,11 @@ with st.sidebar:
 # ====================== TABS ======================
 tab1, tab2 = st.tabs(["🚀 Manual Batch", "⏰ Daily Auto Mode"])
 
-# ====================== TAB 1: MANUAL BATCH ======================
+# ====================== TAB 1: MANUAL ======================
 with tab1:
     st.markdown("### Manual Batch Processing")
     
-    names_input = st.text_area(
-        "Enter names (one per line)",
-        height=140,
-        placeholder="Vikram\nSai\nAbhinav"
-    )
+    names_input = st.text_area("Enter names (one per line)", height=140, placeholder="Vikram\nSai\nAbhinav")
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -176,29 +169,29 @@ with tab1:
         st.session_state.current_video = None
         st.session_state.auto_upload = (auto_upload == "Enabled")
         st.session_state.repeats = repeats
+        st.session_state.is_daily_mode = False
         st.rerun()
 
-# ====================== TAB 2: DAILY AUTO MODE ======================
+# ====================== TAB 2: DAILY AUTO ======================
 with tab2:
     st.markdown("### Daily Automatic Mode")
-    st.info("This mode picks the next 2 names from `remaining_names.txt`, generates videos, uploads them, and removes them from the remaining list.")
+    st.info("Picks the next 2 names from `remaining_names.txt`, generates + uploads them, then removes them from the remaining list.")
 
     col1, col2 = st.columns(2)
     with col1:
         auto_repeats = st.selectbox("Video Length", [1, 2, 3], index=0, key="auto_repeats")
     with col2:
-        delay_minutes = st.number_input("Delay between 2 videos (minutes)", min_value=5, max_value=60, value=30)
+        delay_minutes = st.number_input("Delay between videos (minutes)", min_value=5, max_value=60, value=30)
 
     st.markdown("---")
 
-    # Show current status
     last_run = None
     if os.path.exists("last_run.txt"):
         with open("last_run.txt", "r") as f:
             last_run = f.read().strip()
 
-    st.write(f"**Last Auto Run:** {last_run if last_run else 'Never'}")
-    st.write(f"**Remaining Names:** {len(load_names('remaining_names.txt'))}")
+    st.write(f"**Last Auto Run:** `{last_run if last_run else 'Never'}`")
+    st.write(f"**Remaining Names:** `{len(load_names('remaining_names.txt'))}`")
 
     if st.button("▶️ Run Daily Auto Batch Now", type="primary", use_container_width=True):
         today_names = select_today_names(count=2)
@@ -218,9 +211,8 @@ with tab2:
         st.session_state.is_daily_mode = True
         st.session_state.delay_minutes = delay_minutes
         
-        # Save last run date
         with open("last_run.txt", "w") as f:
-            f.write(get_today_str())
+            f.write(get_now_str())
         
         st.rerun()
 
@@ -233,23 +225,31 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
     is_daily = st.session_state.get("is_daily_mode", False)
 
     if idx >= len(names):
-        # Finished all names
+        # ===== FINISHED =====
         if is_daily:
             completed = [r["name"] for r in st.session_state.batch_results if "Uploaded" in r.get("status", "")]
             if completed:
                 mark_names_as_done(completed)
-                st.success(f"Daily batch finished! Removed {len(completed)} names from remaining list.")
+            
+            st.success(f"""
+            ### Daily Batch Completed Successfully!
+            
+            - Videos processed: **{len(st.session_state.batch_results)}**
+            - Successfully uploaded: **{len(completed)}**
+            - Names removed from remaining list: **{len(completed)}**
+            - Remaining names now: **{len(load_names('remaining_names.txt'))}**
+            """)
+            st.balloons()
         
         st.session_state.batch_running = False
         st.session_state.is_daily_mode = False
-        st.balloons()
         st.rerun()
 
     current_name = names[idx]
     personalized_message = f"Happy Birthday {current_name}!"
 
     st.markdown(f"### Processing {idx + 1} of {len(names)}: `{current_name}`")
-    st.progress(idx / len(names))
+    st.progress((idx) / len(names))
 
     if st.session_state.current_video and os.path.exists(st.session_state.current_video):
         with st.expander("Previous Video", expanded=False):
@@ -273,6 +273,8 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         # Upload
         link = None
         upload_status = "⏸️ Skipped"
+        upload_time = None
+
         if st.session_state.get("auto_upload", True):
             with st.status("Uploading to YouTube...", expanded=True) as s:
                 try:
@@ -283,17 +285,19 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                         name=current_name
                     )
                     upload_status = "✅ Uploaded successfully"
+                    upload_time = get_now_str()
                     s.update(label="Uploaded", state="complete")
                 except Exception as e:
                     upload_status = f"❌ Upload failed: {e}"
                     s.update(label="Upload failed", state="error")
 
-        # Save result
+        # Save result with timestamp
         result = {
             "name": current_name,
             "video_path": video_path,
             "link": link,
-            "status": upload_status
+            "status": upload_status,
+            "upload_time": upload_time or get_now_str()
         }
         st.session_state.batch_results.append(result)
         st.session_state.current_video = video_path
@@ -303,26 +307,48 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         st.video(video_path)
         st.write(upload_status)
 
-        # Delay between videos (for daily mode)
+        # Delay between videos
         if is_daily and idx + 1 < len(names):
             delay = st.session_state.get("delay_minutes", 30) * 60
             st.warning(f"Waiting {st.session_state.get('delay_minutes', 30)} minutes before next video...")
             time.sleep(delay)
 
-        time.sleep(2)
+        time.sleep(1.5)
         st.rerun()
 
     except Exception as e:
         st.error(f"Error on {current_name}: {e}")
         st.session_state.batch_running = False
 
-# ====================== RESULTS ======================
+# ====================== RESULTS TABLE ======================
 if st.session_state.batch_results:
     st.markdown("---")
-    st.markdown("### Results")
-    for res in reversed(st.session_state.batch_results):
-        with st.expander(f"{res['name']} — {res['status']}"):
+    st.markdown("### Upload Results")
+
+    # Create table data
+    table_data = []
+    for res in st.session_state.batch_results:
+        table_data.append({
+            "Name": res["name"],
+            "Status": res["status"],
+            "Upload Date & Time": res.get("upload_time", "-"),
+            "YouTube Link": res["link"] if res.get("link") else "-"
+        })
+
+    st.dataframe(
+        table_data,
+        use_container_width=True,
+        column_config={
+            "YouTube Link": st.column_config.LinkColumn("YouTube Link")
+        }
+    )
+
+    # Also keep expanders for video preview
+    with st.expander("Video Previews"):
+        for res in reversed(st.session_state.batch_results):
+            st.markdown(f"**{res['name']}** — {res['status']}")
             if res.get("video_path") and os.path.exists(res["video_path"]):
                 st.video(res["video_path"])
             if res.get("link"):
                 st.markdown(f"[Watch on YouTube]({res['link']})")
+            st.markdown("---")
