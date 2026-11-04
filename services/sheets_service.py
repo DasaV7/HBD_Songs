@@ -11,27 +11,33 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
+
 def get_sheets_client():
     try:
-        # Method 1: Try nested secrets
-        if "sheets" in st.secrets and "service_account" in st.secrets["sheets"]:
-            sa_info = st.secrets["sheets"]["service_account"]
-            
-            # Convert AttrDict / dict to normal dict
+        if "sheets" not in st.secrets:
+            raise Exception("No [sheets] section found in secrets")
+
+        sheets_secrets = st.secrets["sheets"]
+
+        # ---------- Get service account info ----------
+        if "service_account" in sheets_secrets:
+            sa_info = sheets_secrets["service_account"]
+
+            # Convert Streamlit's special dict to a normal Python dict safely
             if hasattr(sa_info, "to_dict"):
                 sa_info = sa_info.to_dict()
             else:
-                sa_info = dict(sa_info)
-                
-        # Method 2: Try full JSON string
-        elif "sheets" in st.secrets and "service_account_json" in st.secrets["sheets"]:
-            sa_info = json.loads(st.secrets["sheets"]["service_account_json"])
-        else:
-            raise Exception("No service account found in secrets")
+                # Safer conversion
+                sa_info = {k: sa_info[k] for k in sa_info}
 
-        # Fix private_key newlines if needed
-        if "private_key" in sa_info:
-            sa_info["private_key"] = sa_info["private_key"].replace("\\n", "\n")
+        elif "service_account_json" in sheets_secrets:
+            sa_info = json.loads(sheets_secrets["service_account_json"])
+        else:
+            raise Exception("No service_account found in secrets")
+
+        # Fix private_key newlines
+        if "private_key" in sa_info and isinstance(sa_info["private_key"], str):
+            sa_info["private_key"] = sa_info["private_key"].replace("\\n", "\n").strip()
 
         credentials = Credentials.from_service_account_info(sa_info, scopes=SCOPES)
         client = gspread.authorize(credentials)
@@ -40,22 +46,28 @@ def get_sheets_client():
     except Exception as e:
         raise Exception(f"Failed to connect to Google Sheets: {e}")
 
+
 def get_spreadsheet():
     client = get_sheets_client()
     spreadsheet_id = st.secrets["sheets"]["spreadsheet_id"]
     return client.open_by_key(spreadsheet_id)
+
 
 def get_all_names(sheet_name="Remaining"):
     try:
         spreadsheet = get_spreadsheet()
         worksheet = spreadsheet.worksheet(sheet_name)
         names = worksheet.col_values(1)
-        if names and names[0].lower() in ["name", "names"]:
+
+        # Remove header if present
+        if names and names[0].lower().strip() in ["name", "names"]:
             names = names[1:]
+
         return [n.strip() for n in names if n.strip()]
     except Exception as e:
         st.error(f"Error reading {sheet_name}: {e}")
         return []
+
 
 def get_stats():
     return {
@@ -64,9 +76,11 @@ def get_stats():
         "history": len(get_all_names("History"))
     }
 
+
 def select_next_names(count=2):
     remaining = get_all_names("Remaining")
     return remaining[:count]
+
 
 def remove_name_from_remaining(name: str):
     try:
@@ -81,6 +95,7 @@ def remove_name_from_remaining(name: str):
         st.warning(f"Could not remove {name}: {e}")
         return False
 
+
 def add_to_history(name: str, youtube_link: str = ""):
     try:
         spreadsheet = get_spreadsheet()
@@ -91,6 +106,7 @@ def add_to_history(name: str, youtube_link: str = ""):
     except Exception as e:
         st.warning(f"Could not add to History: {e}")
         return False
+
 
 def reset_remaining_from_master():
     try:
