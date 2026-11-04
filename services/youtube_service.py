@@ -39,44 +39,93 @@ def get_youtube_service():
 
 
 def create_thumbnail(name: str, output_path: str = "generated/thumbnail.jpg"):
-    """Create a simple but attractive thumbnail automatically"""
-    width, height = 1280, 720
-    img = Image.new("RGB", (width, height), color=(30, 20, 40))
+    """
+    Create an attractive, high-contrast YouTube thumbnail
+    """
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
+    import random
 
-    # Gradient-like background
+    width, height = 1280, 720
+
+    # Create a rich gradient background
+    img = Image.new("RGB", (width, height))
     draw = ImageDraw.Draw(img)
+
+    # Beautiful purple-pink-gold gradient
     for y in range(height):
-        r = int(40 + (y / height) * 40)
-        g = int(20 + (y / height) * 30)
-        b = int(60 + (y / height) * 50)
+        r = int(60 + (y / height) * 80)
+        g = int(20 + (y / height) * 40)
+        b = int(100 + (y / height) * 60)
         draw.line([(0, y), (width, y)], fill=(r, g, b))
 
-    # Add confetti dots
-    for _ in range(60):
+    # Add soft glowing circles (bokeh effect)
+    for _ in range(18):
         x = random.randint(0, width)
         y = random.randint(0, height)
-        size = random.randint(4, 10)
-        color = random.choice(["#FF9AA2", "#FFD700", "#FF69B4", "#FFFFFF", "#A0C4FF"])
-        draw.ellipse([x, y, x+size, y+size], fill=color)
+        radius = random.randint(40, 120)
+        color = random.choice([
+            (255, 105, 180, 40),   # pink
+            (255, 215, 0, 35),    # gold
+            (186, 85, 211, 30),   # purple
+            (255, 255, 255, 25)   # white
+        ])
+        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.ellipse([x-radius, y-radius, x+radius, y+radius], fill=color)
+        img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
 
-    # Main text
+    draw = ImageDraw.Draw(img)
+
+    # Load fonts
     try:
-        font_large = ImageFont.truetype("assets/fonts/Poppins-Bold.ttf", 90)
-        font_small = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 40)
+        font_large = ImageFont.truetype("assets/fonts/Poppins-Bold.ttf", 110)
+        font_medium = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 52)
+        font_small = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 36)
     except:
         font_large = ImageFont.load_default()
+        font_medium = ImageFont.load_default()
         font_small = ImageFont.load_default()
 
-    text = f"Happy Birthday\n{name}!"
-    # Shadow
-    draw.multiline_text((width//2 - 280 + 4, 250 + 4), text, font=font_large, fill=(0,0,0), align="center", spacing=10)
-    draw.multiline_text((width//2 - 280, 250), text, font=font_large, fill="#FFD700", align="center", spacing=10)
+    # Main text
+    main_text = f"Happy Birthday\n{name}!"
+    
+    # Strong black shadow for readability
+    for offset in range(6, 0, -1):
+        draw.multiline_text(
+            (width//2 - 320 + offset, 180 + offset),
+            main_text,
+            font=font_large,
+            fill=(0, 0, 0),
+            align="center",
+            spacing=15
+        )
 
-    draw.text((width//2 - 180, 520), "Elegant Birthday Video", font=font_small, fill="white")
+    # Bright gold text
+    draw.multiline_text(
+        (width//2 - 320, 180),
+        main_text,
+        font=font_large,
+        fill="#FFD700",
+        align="center",
+        spacing=15
+    )
+
+    # Bottom banner
+    draw.rectangle([0, 580, width, 720], fill=(0, 0, 0, 160))
+    
+    draw.text(
+        (width//2 - 280, 610),
+        "Elegant Birthday Video  •  4K",
+        font=font_medium,
+        fill="white"
+    )
+
+    # Small decorative elements
+    draw.ellipse([80, 80, 140, 140], fill="#FF69B4")
+    draw.ellipse([width-160, 90, width-90, 160], fill="#FFD700")
 
     img.save(output_path, quality=95)
     return output_path
-
 
 def get_or_create_playlist(youtube, title: str, description: str = ""):
     """Get existing playlist or create new one"""
