@@ -67,14 +67,14 @@ if "stop_batch" not in st.session_state:
 # ====================== SIDEBAR ======================
 with st.sidebar:
     st.header("📋 Name Lists (Google Sheets)")
-    
+
     try:
         stats = get_stats()
         st.metric("Master List", stats["master"])
         st.metric("Remaining", stats["remaining"])
         st.metric("History (Uploaded)", stats["history"])
     except Exception as e:
-        st.error(f"Sheets connection error: {e}")
+        st.error(f"Sheets error: {e}")
         stats = {"master": 0, "remaining": 0, "history": 0}
 
     st.markdown("---")
@@ -82,7 +82,7 @@ with st.sidebar:
         try:
             count = reset_remaining_from_master()
             st.success(f"Reset done! {count} names copied to Remaining.")
-            time.sleep(1)
+            time.sleep(1.5)
             st.rerun()
         except Exception as e:
             st.error(str(e))
@@ -90,11 +90,15 @@ with st.sidebar:
 # ====================== TABS ======================
 tab1, tab2 = st.tabs(["🚀 Manual Batch", "⏰ Daily Auto Mode"])
 
-# ====================== TAB 1: MANUAL ======================
+# ====================== TAB 1: MANUAL BATCH ======================
 with tab1:
     st.markdown("### Manual Batch Processing")
-    
-    names_input = st.text_area("Enter names (one per line)", height=140, placeholder="Vikram\nSai\nAbhinav")
+
+    names_input = st.text_area(
+        "Enter names (one per line)",
+        height=140,
+        placeholder="Vikram\nSai\nAbhinav"
+    )
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -106,7 +110,8 @@ with tab1:
 
     col_a, col_b, col_c = st.columns(3)
     with col_a:
-        start_btn = st.button("🚀 Start Batch", type="primary", use_container_width=True, disabled=st.session_state.batch_running)
+        start_btn = st.button("🚀 Start Batch", type="primary", use_container_width=True,
+                              disabled=st.session_state.batch_running)
     with col_b:
         if st.button("🛑 Stop", use_container_width=True):
             st.session_state.stop_batch = True
@@ -123,8 +128,9 @@ with tab1:
         if not names:
             st.error("Please enter at least one name.")
             st.stop()
+
         names = names[:max_videos]
-        
+
         st.session_state.batch_names = names
         st.session_state.batch_index = 0
         st.session_state.batch_results = []
@@ -136,7 +142,7 @@ with tab1:
         st.session_state.is_daily_mode = False
         st.rerun()
 
-# ====================== TAB 2: DAILY AUTO ======================
+# ====================== TAB 2: DAILY AUTO MODE ======================
 with tab2:
     st.markdown("### Daily Automatic Mode")
     st.info("Takes the next 2 names from Google Sheet (Remaining), generates + uploads them, then moves them to History.")
@@ -152,7 +158,7 @@ with tab2:
 
     if st.button("▶️ Run Daily Auto Batch Now", type="primary", use_container_width=True):
         today_names = select_next_names(count=2)
-        
+
         if not today_names:
             st.error("No names left in the Remaining sheet.")
             st.stop()
@@ -179,15 +185,15 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
 
     if idx >= len(names):
         uploaded_count = sum(1 for r in st.session_state.batch_results if "Uploaded successfully" in r.get("status", ""))
-        
+
         st.success(f"""
         ### Batch Completed!
         - Processed: **{len(st.session_state.batch_results)}**
         - Successfully uploaded: **{uploaded_count}**
-        - Remaining names now: **{get_stats()['remaining']}**
+        - Remaining names now: **{get_stats().get('remaining', 0)}**
         """)
         st.balloons()
-        
+
         st.session_state.batch_running = False
         st.session_state.is_daily_mode = False
         st.rerun()
@@ -232,11 +238,11 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                         name=current_name
                     )
                     upload_status = "✅ Uploaded successfully"
-                    
+
                     # Update Google Sheet immediately
                     remove_name_from_remaining(current_name)
                     add_to_history(current_name, link or "")
-                    
+
                     s.update(label="Uploaded + Sheet updated", state="complete")
                 except Exception as e:
                     upload_status = f"❌ Upload failed: {e}"
