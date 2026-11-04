@@ -18,22 +18,30 @@ def get_sheets_client():
             raise Exception("No [sheets] section found in secrets")
 
         sheets_secrets = st.secrets["sheets"]
+        spreadsheet_id = sheets_secrets.get("spreadsheet_id")
+        if not spreadsheet_id:
+            raise Exception("spreadsheet_id is missing")
 
-        # ---------- Get service account info ----------
-        if "service_account" in sheets_secrets:
-            sa_info = sheets_secrets["service_account"]
+        # ---------- Load service account ----------
+        sa_raw = sheets_secrets.get("service_account")
 
-            # Convert Streamlit's special dict to a normal Python dict safely
-            if hasattr(sa_info, "to_dict"):
-                sa_info = sa_info.to_dict()
-            else:
-                # Safer conversion
-                sa_info = {k: sa_info[k] for k in sa_info}
+        if sa_raw is None:
+            raise Exception("service_account is missing in secrets")
 
-        elif "service_account_json" in sheets_secrets:
-            sa_info = json.loads(sheets_secrets["service_account_json"])
+        # Case 1: It is already a dict (nested secrets)
+        if isinstance(sa_raw, dict):
+            sa_info = dict(sa_raw)
+
+        # Case 2: It is a JSON string (your current format)
+        elif isinstance(sa_raw, str):
+            sa_info = json.loads(sa_raw)
+
         else:
-            raise Exception("No service_account found in secrets")
+            # Streamlit AttrDict or similar
+            try:
+                sa_info = {k: sa_raw[k] for k in sa_raw}
+            except Exception:
+                raise Exception(f"Unsupported service_account type: {type(sa_raw)}")
 
         # Fix private_key newlines
         if "private_key" in sa_info and isinstance(sa_info["private_key"], str):
