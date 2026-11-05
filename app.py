@@ -189,7 +189,14 @@ if st.session_state.role == "admin" and tab2 is not None:
         with col1:
             auto_repeats = st.selectbox("Video Length", [1, 2, 3], index=0, key="auto_repeats")
         with col2:
-            delay_minutes = st.number_input("Delay between videos (minutes)", min_value=5, max_value=60, value=15)
+            delay_minutes = st.number_input(
+                "Delay between videos (minutes)",
+                min_value=0,
+                max_value=60,
+                value=15,
+                step=1,
+                help="Set 0 for no waiting time"
+            )
 
         st.write(f"**Remaining Names:** `{stats.get('remaining', 0)}`")
 
