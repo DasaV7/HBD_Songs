@@ -322,14 +322,40 @@ if st.session_state.batch_results:
     st.markdown("---")
     st.markdown("### Results")
 
-    # Video Previews
-    st.markdown("#### Video Previews")
     for res in st.session_state.batch_results:
-        st.markdown(f"**{res['name']}** — {res['status']}")
-        if res.get("video_path") and os.path.exists(res["video_path"]):
-            st.video(res["video_path"])
+        st.markdown(f"#### {res['name']} — {res['status']}")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Video Preview**")
+            if res.get("video_path") and os.path.exists(res["video_path"]):
+                st.video(res["video_path"])
+            else:
+                st.info("Video not available")
+
+        with col2:
+            st.markdown("**Thumbnail Preview**")
+            # Thumbnail is saved as generated/thumbnail.jpg during upload
+            # We also try a name-specific thumbnail if it exists
+            thumb_candidates = [
+                f"generated/{res['name'].replace(' ', '_')}_thumbnail.jpg",
+                "generated/thumbnail.jpg"
+            ]
+            
+            thumb_shown = False
+            for thumb_path in thumb_candidates:
+                if os.path.exists(thumb_path):
+                    st.image(thumb_path, use_container_width=True)
+                    thumb_shown = True
+                    break
+            
+            if not thumb_shown:
+                st.info("Thumbnail not available")
+
         if res.get("link"):
             st.markdown(f"[▶ Watch on YouTube]({res['link']})")
+
         st.markdown("---")
 
     # Status Table
@@ -346,5 +372,8 @@ if st.session_state.batch_results:
     st.dataframe(
         table_data,
         use_container_width=True,
-        column_config={"YouTube Link": st.column_config.LinkColumn("YouTube Link")}
+        column_config={
+            "YouTube Link": st.column_config.LinkColumn("YouTube Link")
+        }
     )
+
