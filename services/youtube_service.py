@@ -39,46 +39,88 @@ def get_youtube_service():
 
 
 def create_thumbnail(name: str, output_path: str = "generated/thumbnail.jpg"):
-    """Fast and reliable thumbnail generator"""
+    """High-visibility thumbnail with large text"""
     from PIL import Image, ImageDraw, ImageFont
-    import random
     import os
 
     width, height = 1280, 720
-    img = Image.new("RGB", (width, height), color=(40, 20, 60))
+
+    # Solid rich purple background
+    img = Image.new("RGB", (width, height), color=(75, 0, 130))
     draw = ImageDraw.Draw(img)
 
-    # Simple gradient
+    # Soft gradient
     for y in range(height):
-        r = int(50 + (y / height) * 60)
+        r = int(90 + (y / height) * 40)
         g = int(20 + (y / height) * 30)
-        b = int(80 + (y / height) * 70)
+        b = int(140 + (y / height) * 50)
         draw.line([(0, y), (width, y)], fill=(r, g, b))
 
-    # Load font (with fallback)
+    # Load the largest possible font
+    font_main = None
+    font_sub = None
+
+    for size in [140, 130, 120, 110]:
+        try:
+            font_main = ImageFont.truetype("assets/fonts/Poppins-Bold.ttf", size)
+            break
+        except:
+            continue
+
     try:
-        font_large = ImageFont.truetype("assets/fonts/Poppins-Bold.ttf", 100)
-        font_small = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 42)
+        font_sub = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 48)
     except:
-        font_large = ImageFont.load_default()
-        font_small = ImageFont.load_default()
+        pass
 
-    # Main text
-    main_text = f"Happy Birthday\n{name}!"
+    if font_main is None:
+        font_main = ImageFont.load_default()
+    if font_sub is None:
+        font_sub = ImageFont.load_default()
 
-    # Shadow
-    draw.multiline_text((width//2 - 300 + 4, 180 + 4), main_text, font=font_large, fill=(0, 0, 0), align="center", spacing=10)
-    # Gold text
-    draw.multiline_text((width//2 - 300, 180), main_text, font=font_large, fill="#FFD700", align="center", spacing=10)
+    # ========== MAIN TEXT ==========
+    line1 = "Happy Birthday"
+    line2 = name + "!"
 
-    # Bottom banner
-    draw.rectangle([0, 580, width, 720], fill=(0, 0, 0))
-    draw.text((width//2 - 220, 620), "Elegant Birthday Video • 4K", font=font_small, fill="white")
+    # Calculate center position
+    def get_text_size(text, font):
+        try:
+            bbox = draw.textbbox((0, 0), text, font=font)
+            return bbox[2] - bbox[0], bbox[3] - bbox[1]
+        except:
+            return 400, 80
 
-    # Save
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    img.save(output_path, quality=90)
+    w1, h1 = get_text_size(line1, font_main)
+    w2, h2 = get_text_size(line2, font_main)
+
+    x1 = (width - w1) // 2
+    x2 = (width - w2) // 2
+    y1 = 180
+    y2 = y1 + h1 + 20
+
+    # Strong black shadow
+    for offset in range(6, 0, -1):
+        draw.text((x1 + offset, y1 + offset), line1, font=font_main, fill=(0, 0, 0))
+        draw.text((x2 + offset, y2 + offset), line2, font=font_main, fill=(0, 0, 0))
+
+    # Bright gold text
+    draw.text((x1, y1), line1, font=font_main, fill="#FFD700")
+    draw.text((x2, y2), line2, font=font_main, fill="#FFD700")
+
+    # ========== BOTTOM BANNER ==========
+    draw.rectangle([0, 600, width, 720], fill=(0, 0, 0))
+
+    banner = "Elegant Birthday Video  •  4K"
+    bw, bh = get_text_size(banner, font_sub)
+    draw.text(((width - bw) // 2, 640), banner, font=font_sub, fill="white")
+
+    # Decorative circles
+    draw.ellipse([50, 50, 140, 140], fill="#FF69B4")
+    draw.ellipse([width-160, 60, width-60, 160], fill="#FFD700")
+
+    os.makedirs(os.path.dirname(output_path) or "generated", exist_ok=True)
+    img.save(output_path, quality=95)
     return output_path
+
 
 def get_or_create_playlist(youtube, title: str, description: str = ""):
     """Get existing playlist or create new one"""
