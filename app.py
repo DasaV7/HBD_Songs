@@ -251,7 +251,18 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
             video_path, used_files = create_video(
                 current_name, personalized_message, audio_file, repeats=current_repeats
             )
-            s.update(label="Video ready", state="complete")
+            
+            # ===== Generate Thumbnail (always) =====
+            try:
+                from services.youtube_service import create_thumbnail
+                safe_name = "".join(c for c in current_name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
+                thumb_path = f"generated/{safe_name}_thumbnail.jpg"
+                create_thumbnail(current_name, output_path=thumb_path)
+            except Exception as e:
+                st.warning(f"Thumbnail generation failed: {e}")
+                thumb_path = None
+            
+            s.update(label="Video + Thumbnail ready", state="complete")
 
         link = None
         upload_status = "⏸️ Skipped"
@@ -279,10 +290,10 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                 except Exception as e:
                     upload_status = f"❌ Upload failed: {e}"
                     s.update(label="Upload failed", state="error")
-
         result = {
             "name": current_name,
             "video_path": video_path,
+            "thumbnail_path": thumb_path,          # ← add this
             "link": link,
             "status": upload_status,
             "upload_time": upload_time
@@ -336,21 +347,10 @@ if st.session_state.batch_results:
 
         with col2:
             st.markdown("**Thumbnail Preview**")
-            # Thumbnail is saved as generated/thumbnail.jpg during upload
-            # We also try a name-specific thumbnail if it exists
-            thumb_candidates = [
-                f"generated/{res['name'].replace(' ', '_')}_thumbnail.jpg",
-                "generated/thumbnail.jpg"
-            ]
-            
-            thumb_shown = False
-            for thumb_path in thumb_candidates:
-                if os.path.exists(thumb_path):
-                    st.image(thumb_path, use_container_width=True)
-                    thumb_shown = True
-                    break
-            
-            if not thumb_shown:
+            thumb_path = res.get("thumbnail_path")
+            if thumb_path and os.path.exists(thumb_path):
+                st.image(thumb_path, use_container_width=True)
+            else:
                 st.info("Thumbnail not available")
 
         if res.get("link"):
@@ -376,4 +376,3 @@ if st.session_state.batch_results:
             "YouTube Link": st.column_config.LinkColumn("YouTube Link")
         }
     )
-
