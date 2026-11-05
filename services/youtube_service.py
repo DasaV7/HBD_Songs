@@ -145,12 +145,23 @@ def create_thumbnail(name: str, output_path: str = "generated/thumbnail.jpg"):
         color = random.choice(["#FF69B4", "#FFD700", "#87CEFA", "#FFA07A", "#DDA0DD"])
         draw.ellipse([x, y, x+size, y+size], fill=color)
 
-    # ========== Bottom Banner ==========
-    draw.rectangle([0, 610, width, 720], fill=(255, 255, 255, 220))
+    # ========== BOTTOM BANNER ==========
+    draw.rectangle([0, 600, width, 720], fill=(255, 255, 255))
     
+    # Main banner text
     banner = "Elegant Birthday Video  •  4K"
     bw, bh = get_size(banner, font_banner)
-    draw.text(((width - bw) // 2, 645), banner, font=font_banner, fill="#FF6B8B")
+    draw.text(((width - bw) // 2, 620), banner, font=font_banner, fill="#FF6B8B")
+    
+    # Website (smaller text)
+    website = "https://hbdsongs.streamlit.app"
+    try:
+        font_web = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 32)
+    except:
+        font_web = font_banner
+    
+    ww, wh = get_size(website, font_web)
+    draw.text(((width - ww) // 2, 670), website, font=font_web, fill="#666666")
 
     os.makedirs("generated", exist_ok=True)
     img.save(output_path, quality=95)
