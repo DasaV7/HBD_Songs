@@ -13,8 +13,7 @@ from services.sheets_service import (
     select_next_names,
     remove_name_from_remaining,
     add_to_history,
-    reset_remaining_from_master,
-    get_all_names
+    reset_remaining_from_master
 )
 
 os.makedirs("generated", exist_ok=True)
@@ -53,7 +52,6 @@ def check_login():
         submit = st.form_submit_button("Login", use_container_width=True)
 
         if submit:
-            # Read credentials from secrets
             admin_user = st.secrets.get("ADMIN_USERNAME", "admin")
             admin_pass = st.secrets.get("ADMIN_PASSWORD", "admin123")
             user_user = st.secrets.get("USER_USERNAME", "user")
@@ -72,14 +70,12 @@ def check_login():
 
     st.stop()
 
-# Run login check
 check_login()
 
 # ====================== HEADER ======================
 st.markdown('<div class="main-title">🎂 Birthday Video Generator</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="sub-title">Logged in as: <b>{st.session_state.role.upper()}</b></div>', unsafe_allow_html=True)
 
-# Logout button
 if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
     st.session_state.role = None
@@ -98,25 +94,32 @@ if "current_video" not in st.session_state:
     st.session_state.current_video = None
 if "stop_batch" not in st.session_state:
     st.session_state.stop_batch = False
+if "stats" not in st.session_state:
+    st.session_state.stats = {"master": 0, "remaining": 0, "history": 0}
 
 # ====================== SIDEBAR ======================
 with st.sidebar:
     st.header("📋 Name Lists")
 
-    try:
-        stats = get_stats()
-        st.metric("Master List", stats["master"])
-        st.metric("Remaining", stats["remaining"])
-        st.metric("History (Uploaded)", stats["history"])
-    except Exception as e:
-        st.error(f"Sheets error: {e}")
-        stats = {"master": 0, "remaining": 0, "history": 0}
+    # Safer: only refresh when button is clicked
+    if st.button("🔄 Refresh Stats"):
+        try:
+            st.session_state.stats = get_stats()
+            st.success("Stats updated!")
+        except Exception as e:
+            st.error(f"Failed to refresh: {e}")
+
+    stats = st.session_state.stats
+    st.metric("Master List", stats.get("master", 0))
+    st.metric("Remaining", stats.get("remaining", 0))
+    st.metric("History (Uploaded)", stats.get("history", 0))
 
     if st.session_state.role == "admin":
         st.markdown("---")
         if st.button("🔄 Reset Remaining from Master"):
             try:
                 count = reset_remaining_from_master()
+                st.session_state.stats = get_stats()  # refresh after reset
                 st.success(f"Reset done! {count} names copied.")
                 time.sleep(1)
                 st.rerun()
@@ -130,7 +133,7 @@ else:
     tab1 = st.container()
     tab2 = None
 
-# ====================== MANUAL BATCH (Both roles) ======================
+# ====================== MANUAL BATCH ======================
 with tab1:
     st.markdown("### Manual Batch Processing")
 
@@ -222,7 +225,6 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         ### Batch Completed!
         - Processed: **{len(st.session_state.batch_results)}**
         - Successfully uploaded: **{uploaded_count}**
-        - Remaining names: **{get_stats().get('remaining', 0)}**
         """)
         st.balloons()
         st.session_state.batch_running = False
@@ -266,10 +268,10 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                     )
                     upload_status = "✅ Uploaded successfully"
 
-                    # Always log to History (both Manual + Daily)
+                    # Always log to History
                     add_to_history(current_name, link or "")
 
-                    # Only remove from Remaining if it came from Daily mode
+                    # Only remove from Remaining in Daily mode
                     if is_daily:
                         remove_name_from_remaining(current_name)
 
@@ -320,23 +322,18 @@ if st.session_state.batch_results:
     st.markdown("---")
     st.markdown("### Results")
 
-    # 1. Show Video Previews first (they stay visible)
+    # Video Previews
     st.markdown("#### Video Previews")
     for res in st.session_state.batch_results:
-        with st.container():
-            st.markdown(f"**{res['name']}** — {res['status']}")
-            
-            if res.get("video_path") and os.path.exists(res["video_path"]):
-                st.video(res["video_path"])
-            
-            if res.get("link"):
-                st.markdown(f"[▶ Watch on YouTube]({res['link']})")
-            
-            st.markdown("---")
+        st.markdown(f"**{res['name']}** — {res['status']}")
+        if res.get("video_path") and os.path.exists(res["video_path"]):
+            st.video(res["video_path"])
+        if res.get("link"):
+            st.markdown(f"[▶ Watch on YouTube]({res['link']})")
+        st.markdown("---")
 
-    # 2. Show Status Table below the videos
+    # Status Table
     st.markdown("#### Upload Status Table")
-    
     table_data = []
     for res in st.session_state.batch_results:
         table_data.append({
@@ -349,7 +346,5 @@ if st.session_state.batch_results:
     st.dataframe(
         table_data,
         use_container_width=True,
-        column_config={
-            "YouTube Link": st.column_config.LinkColumn("YouTube Link")
-        }
+        column_config={"YouTube Link": st.column_config.LinkColumn("YouTube Link")}
     )
