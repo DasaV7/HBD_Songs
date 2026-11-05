@@ -11,7 +11,7 @@ from moviepy.editor import (
     concatenate_audioclips
 )
 
-from PIL import ImageDraw, ImageFont, ImageEnhance
+from PIL import ImageDraw, ImageFont
 import random
 import os
 
@@ -58,7 +58,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         y_pos = 220
 
     font = None
-    for fpath in ["assets/fonts/Poppins-Bold.ttf", "assets/fonts/Poppins-SemiBold.ttf", "assets/fonts/Montserrat-Bold.ttf"]:
+    for fpath in FONT_CANDIDATES:
         try:
             font = ImageFont.truetype(fpath, font_size)
             break
@@ -67,12 +67,19 @@ def create_slide(text, background, duration, output_file, is_end=False):
     if font is None:
         font = ImageFont.load_default()
 
-    # Text position
     x_pos = 60
 
     # Soft shadow
-    draw.multiline_text((x_pos + 3, y_pos + 3), text, font=font, fill=(0, 0, 0, 180), spacing=12, align="center")
-    draw.multiline_text((x_pos, y_pos), text, font=font, fill=random.choice(COLORS), spacing=12, align="center")
+    draw.multiline_text(
+        (x_pos + 3, y_pos + 3), text,
+        font=font, fill=(0, 0, 0, 180),
+        spacing=12, align="center"
+    )
+    draw.multiline_text(
+        (x_pos, y_pos), text,
+        font=font, fill=random.choice(COLORS),
+        spacing=12, align="center"
+    )
 
     # Bigger frame for End slide
     if is_end:
@@ -88,6 +95,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
             .fadein(0.8)
             .fadeout(0.8))
     return clip
+
 
 def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     repeats = max(1, min(5, int(repeats)))
@@ -114,7 +122,6 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
         "videos": []
     }
 
-    # ---------- BASE CONTENT ----------
     base_clips = []
 
     # 1. Intro
@@ -141,13 +148,13 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
 
     base_video = concatenate_videoclips(base_clips, method="compose")
 
-    # ---------- REPEAT ----------
+    # Repeat
     if repeats > 1:
         main_part = concatenate_videoclips([base_video] * repeats, method="compose")
     else:
         main_part = base_video
 
-    # ---------- END SLIDE (only once) ----------
+    # End slide
     end_text = (
         "Thank You for Watching!\n\n"
         "Please Like • Share • Comment\n"
@@ -160,7 +167,7 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
 
     final_video = concatenate_videoclips([main_part, end_clip], method="compose")
 
-    # ---------- AUDIO ----------
+    # Audio
     total_duration = final_video.duration
     if audio.duration < total_duration:
         loops = int(total_duration / audio.duration) + 1
@@ -169,7 +176,7 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     audio = audio.subclip(0, total_duration)
     final_video = final_video.set_audio(audio)
 
-    # ---------- EXPORT ----------
+    # Export
     safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
     output_path = f"generated/{safe_name}.mp4"
 
@@ -182,7 +189,7 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
         remove_temp=True,
         threads=2,
         logger=None,
-        preset="ultrafast"          # Much faster
+        preset="ultrafast"
     )
 
     final_video.close()
