@@ -51,14 +51,14 @@ def create_slide(text, background, duration, output_file, is_end=False):
 
     # Font size
     if is_end:
-        font_size = 48
-        y_pos = 160
+        font_size = 46
+        y_pos = 140
     else:
         font_size = 68
-        y_pos = 230
+        y_pos = 220
 
     font = None
-    for fpath in FONT_CANDIDATES:
+    for fpath in ["assets/fonts/Poppins-Bold.ttf", "assets/fonts/Poppins-SemiBold.ttf", "assets/fonts/Montserrat-Bold.ttf"]:
         try:
             font = ImageFont.truetype(fpath, font_size)
             break
@@ -67,13 +67,18 @@ def create_slide(text, background, duration, output_file, is_end=False):
     if font is None:
         font = ImageFont.load_default()
 
-    # Text with shadow
+    # Text position
     x_pos = 60
-    draw.multiline_text((x_pos+3, y_pos+3), text, font=font, fill=(0,0,0,180), spacing=12, align="center")
+
+    # Soft shadow
+    draw.multiline_text((x_pos + 3, y_pos + 3), text, font=font, fill=(0, 0, 0, 180), spacing=12, align="center")
     draw.multiline_text((x_pos, y_pos), text, font=font, fill=random.choice(COLORS), spacing=12, align="center")
 
-    # Frame
-    draw.rounded_rectangle((40, 140, 1240, 580), radius=25, outline=(255,255,255,150), width=3)
+    # Bigger frame for End slide
+    if is_end:
+        draw.rounded_rectangle((30, 100, 1250, 620), radius=25, outline=(255, 255, 255, 160), width=3)
+    else:
+        draw.rounded_rectangle((40, 140, 1240, 580), radius=25, outline=(255, 255, 255, 150), width=3)
 
     img = img.convert("RGB")
     img.save(output_file, quality=90)
@@ -83,7 +88,6 @@ def create_slide(text, background, duration, output_file, is_end=False):
             .fadein(0.8)
             .fadeout(0.8))
     return clip
-
 
 def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     repeats = max(1, min(5, int(repeats)))
