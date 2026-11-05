@@ -18,30 +18,18 @@ def get_sheets_client():
             raise Exception("No [sheets] section found in secrets")
 
         sheets_secrets = st.secrets["sheets"]
-        spreadsheet_id = sheets_secrets.get("spreadsheet_id")
-        if not spreadsheet_id:
-            raise Exception("spreadsheet_id is missing")
-
-        # ---------- Load service account ----------
         sa_raw = sheets_secrets.get("service_account")
 
         if sa_raw is None:
             raise Exception("service_account is missing in secrets")
 
-        # Case 1: It is already a dict (nested secrets)
+        # Handle both dict and JSON string
         if isinstance(sa_raw, dict):
             sa_info = dict(sa_raw)
-
-        # Case 2: It is a JSON string (your current format)
         elif isinstance(sa_raw, str):
             sa_info = json.loads(sa_raw)
-
         else:
-            # Streamlit AttrDict or similar
-            try:
-                sa_info = {k: sa_raw[k] for k in sa_raw}
-            except Exception:
-                raise Exception(f"Unsupported service_account type: {type(sa_raw)}")
+            sa_info = {k: sa_raw[k] for k in sa_raw}
 
         # Fix private_key newlines
         if "private_key" in sa_info and isinstance(sa_info["private_key"], str):
@@ -67,7 +55,6 @@ def get_all_names(sheet_name="Remaining"):
         worksheet = spreadsheet.worksheet(sheet_name)
         names = worksheet.col_values(1)
 
-        # Remove header if present
         if names and names[0].lower().strip() in ["name", "names"]:
             names = names[1:]
 
@@ -78,6 +65,7 @@ def get_all_names(sheet_name="Remaining"):
 
 
 def get_stats():
+    """Direct call - only use when user clicks Refresh"""
     return {
         "master": len(get_all_names("Master")),
         "remaining": len(get_all_names("Remaining")),
