@@ -243,26 +243,30 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
 
     try:
         with st.status(f"Generating **{current_name}**...", expanded=True) as s:
+            st.write("Creating lyrics & audio...")
             lyrics = generate_lyrics(current_name, personalized_message)
             audio_file = f"generated/{current_name}.mp3"
             asyncio.run(generate_audio(lyrics, audio_file))
             time.sleep(0.3)
-
+        
+            st.write("Rendering video...")
             video_path, used_files = create_video(
-                current_name, personalized_message, audio_file, repeats=current_repeats
+                current_name,
+                personalized_message,
+                audio_file,
+                repeats=current_repeats
             )
-            
-            # ===== Generate Thumbnail (always) =====
-            try:
-                from services.youtube_service import create_thumbnail
-                safe_name = "".join(c for c in current_name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
-                thumb_path = f"generated/{safe_name}_thumbnail.jpg"
-                create_thumbnail(current_name, output_path=thumb_path)
-            except Exception as e:
-                st.warning(f"Thumbnail generation failed: {e}")
-                thumb_path = None
-            
-            s.update(label="Video + Thumbnail ready", state="complete")
+            s.update(label="Video ready", state="complete")
+        
+        # ===== Generate Thumbnail AFTER the status block (safer) =====
+        thumb_path = None
+        try:
+            from services.youtube_service import create_thumbnail
+            safe_name = "".join(c for c in current_name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
+            thumb_path = f"generated/{safe_name}_thumbnail.jpg"
+            create_thumbnail(current_name, output_path=thumb_path)
+        except Exception as e:
+            st.warning(f"Thumbnail skipped: {e}")
 
         link = None
         upload_status = "⏸️ Skipped"
