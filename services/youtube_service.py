@@ -209,31 +209,29 @@ def upload_video(video_path: str, title: str, description: str = "", name: str =
         youtube = get_youtube_service()
 
         # Better title
-        final_title = f"Happy Birthday {name}! 🎂 Elegant Birthday Video | 4K Screensaver"[:100]
+        final_title = f"Happy Birthday {name}! Elegant Birthday Video | 4K"[:100]
 
-        # Better description
+        # Description with website link
         final_description = f"""🎈 Happy Birthday {name}! 🎂
 
-Celebrate in style with this elegant personalized Happy Birthday video for {name}.
-Perfect as a birthday party background, TV screensaver, or heartfelt birthday wish.
+Celebrate in style with this elegant personalized Happy Birthday video created just for {name}.
 
 ✨ Perfect for:
-• Birthday parties & home celebrations
-• TV displays & event venues
-• Restaurants & cafés
+• Birthday parties
+• Home celebrations
+• TV displays & screensavers
 • Family gatherings
 
 This video was created with love using AI.
 
-If you enjoy this video, please Like 👍, Subscribe 🔔 and share it!
-
-Thank you for watching and Happy Birthday {name}! 🎉💖
-
-#HappyBirthday #HappyBirthday{name.replace(" ", "")} #BirthdayVideo #BirthdayWishes #BirthdayScreensaver #4KBirthday #PartyDecor #BirthdayBackground #BirthdayCelebration
-
-Request your Custom Birthday Video here:
+🔗 Request your own Custom Birthday Video here:
 https://hbdsongs.streamlit.app
 
+If you enjoy this video, please Like, Share and Subscribe for more birthday videos!
+
+Thank you for watching and Happy Birthday {name}! 
+
+#HappyBirthday #HappyBirthday{name.replace(" ", "")} #BirthdayVideo #BirthdayWishes #BirthdayScreensaver #4KBirthday #PartyDecor #BirthdayBackground
 """
 
         body = {
@@ -241,10 +239,15 @@ https://hbdsongs.streamlit.app
                 "title": final_title,
                 "description": final_description,
                 "tags": [
-                    "Happy Birthday", f"Happy Birthday {name}", "Birthday Video",
-                    "Birthday Wishes", "Birthday Screensaver", "4K Birthday",
-                    "Party Decor", "Birthday Background", "Elegant Birthday",
-                    "Birthday Celebration", "Birthday Song"
+                    "Happy Birthday",
+                    f"Happy Birthday {name}",
+                    "Birthday Video",
+                    "Birthday Wishes",
+                    "Birthday Screensaver",
+                    "4K Birthday",
+                    "Party Decor",
+                    "Elegant Birthday",
+                    "Birthday Celebration"
                 ],
                 "categoryId": "22",
             },
@@ -254,9 +257,18 @@ https://hbdsongs.streamlit.app
             },
         }
 
-        media = MediaFileUpload(video_path, mimetype="video/mp4", resumable=True, chunksize=5*1024*1024)
+        media = MediaFileUpload(
+            video_path,
+            mimetype="video/mp4",
+            resumable=True,
+            chunksize=5 * 1024 * 1024
+        )
 
-        request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+        request = youtube.videos().insert(
+            part="snippet,status",
+            body=body,
+            media_body=media
+        )
 
         response = None
         while response is None:
@@ -266,34 +278,23 @@ https://hbdsongs.streamlit.app
 
         video_id = response["id"]
 
-        # ===== Auto Thumbnail =====
+        # ===== Upload Thumbnail =====
         try:
-            #thumb_path = create_thumbnail(name)
-            
             safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
-            thumb_path = create_thumbnail(name, output_path=f"generated/{safe_name}_thumbnail.jpg")
+            thumb_path = f"generated/{safe_name}_thumbnail.jpg"
+            
+            if not os.path.exists(thumb_path):
+                thumb_path = create_thumbnail(name, output_path=thumb_path)
+                
             youtube.thumbnails().set(
                 videoId=video_id,
                 media_body=MediaFileUpload(thumb_path)
             ).execute()
-            st.write("Thumbnail uploaded successfully")
+            st.write("Thumbnail uploaded")
         except Exception as e:
             st.write(f"Thumbnail skipped: {e}")
 
-        # ===== Add to Playlists =====
-        try:
-            playlist1 = get_or_create_playlist(youtube, "Happy Birthday Videos 2025", "Collection of elegant birthday videos")
-            playlist2 = get_or_create_playlist(youtube, "Elegant Birthday Screensavers", "Beautiful birthday screensaver videos")
-
-            add_video_to_playlist(youtube, playlist1, video_id)
-            add_video_to_playlist(youtube, playlist2, video_id)
-            st.write("Added to playlists")
-        except Exception as e:
-            st.write(f"Playlist error: {e}")
-
         return f"https://www.youtube.com/watch?v={video_id}"
 
-    except HttpError as e:
-        raise Exception(f"YouTube API error: {e}")
     except Exception as e:
         raise Exception(f"Upload failed: {str(e)}")
