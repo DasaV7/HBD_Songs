@@ -243,7 +243,10 @@ Thank you for watching and Happy Birthday {name}! 🎉💖
 
         # ===== Auto Thumbnail =====
         try:
-            thumb_path = create_thumbnail(name)
+            #thumb_path = create_thumbnail(name)
+            
+            safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
+            thumb_path = create_thumbnail(name, output_path=f"generated/{safe_name}_thumbnail.jpg")
             youtube.thumbnails().set(
                 videoId=video_id,
                 media_body=MediaFileUpload(thumb_path)
