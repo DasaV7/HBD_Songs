@@ -40,90 +40,109 @@ def get_youtube_service():
 
 def create_thumbnail(name: str, output_path: str = "generated/thumbnail.jpg"):
     """
-    Create an attractive, high-contrast YouTube thumbnail
+    Create a clear, high-contrast, attractive YouTube thumbnail
     """
-    from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
     import random
+    import os
 
     width, height = 1280, 720
 
-    # Create a rich gradient background
+    # ========== 1. Create a clean gradient background ==========
     img = Image.new("RGB", (width, height))
     draw = ImageDraw.Draw(img)
 
-    # Beautiful purple-pink-gold gradient
+    # Nice purple → deep blue gradient
     for y in range(height):
-        r = int(60 + (y / height) * 80)
-        g = int(20 + (y / height) * 40)
-        b = int(100 + (y / height) * 60)
+        r = int(70 + (y / height) * 50)
+        g = int(30 + (y / height) * 40)
+        b = int(120 + (y / height) * 80)
         draw.line([(0, y), (width, y)], fill=(r, g, b))
 
-    # Add soft glowing circles (bokeh effect)
-    for _ in range(18):
-        x = random.randint(0, width)
-        y = random.randint(0, height)
-        radius = random.randint(40, 120)
-        color = random.choice([
-            (255, 105, 180, 40),   # pink
-            (255, 215, 0, 35),    # gold
-            (186, 85, 211, 30),   # purple
-            (255, 255, 255, 25)   # white
-        ])
-        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        overlay_draw = ImageDraw.Draw(overlay)
-        overlay_draw.ellipse([x-radius, y-radius, x+radius, y+radius], fill=color)
-        img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+    # ========== 2. Soft glowing orbs (elegant bokeh) ==========
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
 
+    colors = [
+        (255, 105, 180, 50),   # pink
+        (255, 215, 0, 45),     # gold
+        (186, 85, 211, 40),    # purple
+        (255, 255, 255, 30),   # white
+    ]
+
+    for _ in range(12):
+        x = random.randint(50, width - 50)
+        y = random.randint(50, height - 50)
+        radius = random.randint(60, 140)
+        color = random.choice(colors)
+        overlay_draw.ellipse(
+            [x - radius, y - radius, x + radius, y + radius],
+            fill=color
+        )
+
+    img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    # Load fonts
+    # ========== 3. Load large bold fonts ==========
     try:
-        font_large = ImageFont.truetype("assets/fonts/Poppins-Bold.ttf", 110)
-        font_medium = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 52)
-        font_small = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 36)
+        font_large = ImageFont.truetype("assets/fonts/Poppins-Bold.ttf", 120)
+        font_medium = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 48)
     except:
-        font_large = ImageFont.load_default()
-        font_medium = ImageFont.load_default()
-        font_small = ImageFont.load_default()
+        try:
+            font_large = ImageFont.truetype("assets/fonts/Montserrat-Bold.ttf", 120)
+            font_medium = ImageFont.truetype("assets/fonts/Montserrat-SemiBold.ttf", 48)
+        except:
+            font_large = ImageFont.load_default()
+            font_medium = ImageFont.load_default()
 
-    # Main text
+    # ========== 4. Main Text ==========
     main_text = f"Happy Birthday\n{name}!"
-    
-    # Strong black shadow for readability
-    for offset in range(6, 0, -1):
+
+    # Strong multi-layer shadow for maximum readability
+    shadow_color = (0, 0, 0)
+    for i in range(8, 0, -1):
         draw.multiline_text(
-            (width//2 - 320 + offset, 180 + offset),
+            ((width - 700) // 2 + i, 160 + i),
             main_text,
             font=font_large,
-            fill=(0, 0, 0),
+            fill=shadow_color,
             align="center",
-            spacing=15
+            spacing=12
         )
 
     # Bright gold text
     draw.multiline_text(
-        (width//2 - 320, 180),
+        ((width - 700) // 2, 160),
         main_text,
         font=font_large,
         fill="#FFD700",
         align="center",
-        spacing=15
+        spacing=12
     )
 
-    # Bottom banner
-    draw.rectangle([0, 580, width, 720], fill=(0, 0, 0, 160))
-    
+    # ========== 5. Bottom banner ==========
+    draw.rectangle([0, 580, width, 720], fill=(0, 0, 0, 180))
+
+    # Banner text
+    banner_text = "Elegant Birthday Video  •  4K"
+    try:
+        bbox = draw.textbbox((0, 0), banner_text, font=font_medium)
+        text_width = bbox[2] - bbox[0]
+    except:
+        text_width = 500
+
     draw.text(
-        (width//2 - 280, 610),
-        "Elegant Birthday Video  •  4K",
+        ((width - text_width) // 2, 615),
+        banner_text,
         font=font_medium,
         fill="white"
     )
 
-    # Small decorative elements
-    draw.ellipse([80, 80, 140, 140], fill="#FF69B4")
-    draw.ellipse([width-160, 90, width-90, 160], fill="#FFD700")
+    # ========== 6. Small decorative circles ==========
+    draw.ellipse([60, 60, 130, 130], fill="#FF69B4")
+    draw.ellipse([width - 150, 70, width - 80, 140], fill="#FFD700")
 
+    # Save
     img.save(output_path, quality=95)
     return output_path
 
