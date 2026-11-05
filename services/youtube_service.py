@@ -38,88 +38,124 @@ def get_youtube_service():
     return build("youtube", "v3", credentials=creds)
 
 def create_thumbnail(name: str, output_path: str = "generated/thumbnail.jpg"):
-    """Reliable thumbnail with large text (works even without custom fonts)"""
+    """iOS pastel style thumbnail with birthday celebration elements"""
     from PIL import Image, ImageDraw, ImageFont
+    import random
     import os
 
     width, height = 1280, 720
-    img = Image.new("RGB", (width, height), color=(75, 0, 130))
+
+    # ========== iOS Pastel Gradient Background ==========
+    img = Image.new("RGB", (width, height))
     draw = ImageDraw.Draw(img)
 
-    # Gradient background
+    # Soft pastel gradient (pink → peach → lavender)
     for y in range(height):
-        r = int(85 + (y / height) * 40)
-        g = int(25 + (y / height) * 30)
-        b = int(130 + (y / height) * 50)
+        ratio = y / height
+        r = int(255 - ratio * 40)
+        g = int(220 - ratio * 60)
+        b = int(230 - ratio * 30)
         draw.line([(0, y), (width, y)], fill=(r, g, b))
 
-    # Try to load custom font, otherwise use default with big size
+    # ========== Soft decorative circles (iOS style) ==========
+    pastel_colors = [
+        (255, 182, 193, 90),   # light pink
+        (255, 218, 185, 80),   # peach
+        (221, 160, 221, 70),   # plum
+        (176, 224, 230, 80),   # powder blue
+        (255, 255, 224, 70),   # light yellow
+    ]
+
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+
+    for _ in range(14):
+        x = random.randint(0, width)
+        y = random.randint(0, height)
+        radius = random.randint(50, 160)
+        color = random.choice(pastel_colors)
+        overlay_draw.ellipse([x-radius, y-radius, x+radius, y+radius], fill=color)
+
+    img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+    draw = ImageDraw.Draw(img)
+
+    # ========== Load Bold Font ==========
     font_main = None
     font_banner = None
 
-    font_paths = [
-        "assets/fonts/Poppins-Bold.ttf",
-        "assets/fonts/Montserrat-Bold.ttf",
-        "assets/fonts/Poppins-SemiBold.ttf",
-    ]
-
-    for path in font_paths:
+    for path in ["assets/fonts/Poppins-Bold.ttf", "assets/fonts/Montserrat-Bold.ttf"]:
         try:
-            font_main = ImageFont.truetype(path, 135)
-            font_banner = ImageFont.truetype(path, 52)
+            font_main = ImageFont.truetype(path, 125)
+            font_banner = ImageFont.truetype(path, 46)
             break
         except:
             continue
 
-    # Fallback: default font but we will draw bigger
     if font_main is None:
         font_main = ImageFont.load_default()
         font_banner = ImageFont.load_default()
 
-    # ========== MAIN TEXT ==========
+    # ========== Main Text ==========
     line1 = "Happy Birthday"
     line2 = f"{name}!"
 
-    # Helper to get text size
-    def text_size(text, font):
+    def get_size(text, font):
         try:
             bbox = draw.textbbox((0, 0), text, font=font)
             return bbox[2] - bbox[0], bbox[3] - bbox[1]
         except:
-            return len(text) * 40, 60
+            return 500, 80
 
-    w1, h1 = text_size(line1, font_main)
-    w2, h2 = text_size(line2, font_main)
+    w1, h1 = get_size(line1, font_main)
+    w2, h2 = get_size(line2, font_main)
 
     x1 = (width - w1) // 2
     x2 = (width - w2) // 2
-    y1 = 200
-    y2 = y1 + h1 + 25
+    y1 = 190
+    y2 = y1 + h1 + 15
 
-    # Draw strong shadow
-    for i in range(8, 0, -1):
-        draw.text((x1 + i, y1 + i), line1, font=font_main, fill=(0, 0, 0))
-        draw.text((x2 + i, y2 + i), line2, font=font_main, fill=(0, 0, 0))
+    # Soft shadow
+    for i in range(6, 0, -1):
+        draw.text((x1 + i, y1 + i), line1, font=font_main, fill=(80, 40, 60))
+        draw.text((x2 + i, y2 + i), line2, font=font_main, fill=(80, 40, 60))
 
-    # Bright gold text
-    draw.text((x1, y1), line1, font=font_main, fill="#FFD700")
-    draw.text((x2, y2), line2, font=font_main, fill="#FFD700")
+    # Beautiful text color
+    draw.text((x1, y1), line1, font=font_main, fill="#FF6B8B")      # soft pink
+    draw.text((x2, y2), line2, font=font_main, fill="#FF6B8B")
 
-    # ========== BOTTOM BANNER ==========
-    draw.rectangle([0, 600, width, 720], fill=(0, 0, 0))
+    # ========== Birthday Icons (simple shapes) ==========
+    # Cake
+    draw.rectangle([110, 480, 190, 560], fill="#FFB6C1")
+    draw.rectangle([120, 450, 180, 480], fill="#FFF0F5")
+    draw.ellipse([130, 430, 170, 455], fill="#FF69B4")
 
+    # Balloon 1
+    draw.ellipse([1050, 420, 1130, 520], fill="#FF69B4")
+    draw.line([1090, 520, 1090, 580], fill="#FF69B4", width=3)
+
+    # Balloon 2
+    draw.ellipse([980, 450, 1050, 540], fill="#87CEFA")
+    draw.line([1015, 540, 1015, 590], fill="#87CEFA", width=3)
+
+    # Confetti dots
+    for _ in range(25):
+        x = random.randint(50, width-50)
+        y = random.randint(50, 650)
+        size = random.randint(6, 12)
+        color = random.choice(["#FF69B4", "#FFD700", "#87CEFA", "#FFA07A", "#DDA0DD"])
+        draw.ellipse([x, y, x+size, y+size], fill=color)
+
+    # ========== Bottom Banner ==========
+    draw.rectangle([0, 610, width, 720], fill=(255, 255, 255, 220))
+    
     banner = "Elegant Birthday Video  •  4K"
-    bw, bh = text_size(banner, font_banner)
-    draw.text(((width - bw) // 2, 640), banner, font=font_banner, fill="white")
-
-    # Decorative circles
-    draw.ellipse([40, 40, 140, 140], fill="#FF69B4")
-    draw.ellipse([width - 160, 50, width - 50, 160], fill="#FFD700")
+    bw, bh = get_size(banner, font_banner)
+    draw.text(((width - bw) // 2, 645), banner, font=font_banner, fill="#FF6B8B")
 
     os.makedirs("generated", exist_ok=True)
     img.save(output_path, quality=95)
     return output_path
-
+    
 def get_or_create_playlist(youtube, title: str, description: str = ""):
     """Get existing playlist or create new one"""
     # Search existing playlists
