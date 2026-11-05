@@ -37,70 +37,69 @@ def get_youtube_service():
 
     return build("youtube", "v3", credentials=creds)
 
-
 def create_thumbnail(name: str, output_path: str = "generated/thumbnail.jpg"):
-    """High-visibility thumbnail with large text"""
+    """Reliable thumbnail with large text (works even without custom fonts)"""
     from PIL import Image, ImageDraw, ImageFont
     import os
 
     width, height = 1280, 720
-
-    # Solid rich purple background
     img = Image.new("RGB", (width, height), color=(75, 0, 130))
     draw = ImageDraw.Draw(img)
 
-    # Soft gradient
+    # Gradient background
     for y in range(height):
-        r = int(90 + (y / height) * 40)
-        g = int(20 + (y / height) * 30)
-        b = int(140 + (y / height) * 50)
+        r = int(85 + (y / height) * 40)
+        g = int(25 + (y / height) * 30)
+        b = int(130 + (y / height) * 50)
         draw.line([(0, y), (width, y)], fill=(r, g, b))
 
-    # Load the largest possible font
+    # Try to load custom font, otherwise use default with big size
     font_main = None
-    font_sub = None
+    font_banner = None
 
-    for size in [140, 130, 120, 110]:
+    font_paths = [
+        "assets/fonts/Poppins-Bold.ttf",
+        "assets/fonts/Montserrat-Bold.ttf",
+        "assets/fonts/Poppins-SemiBold.ttf",
+    ]
+
+    for path in font_paths:
         try:
-            font_main = ImageFont.truetype("assets/fonts/Poppins-Bold.ttf", size)
+            font_main = ImageFont.truetype(path, 135)
+            font_banner = ImageFont.truetype(path, 52)
             break
         except:
             continue
 
-    try:
-        font_sub = ImageFont.truetype("assets/fonts/Poppins-SemiBold.ttf", 48)
-    except:
-        pass
-
+    # Fallback: default font but we will draw bigger
     if font_main is None:
         font_main = ImageFont.load_default()
-    if font_sub is None:
-        font_sub = ImageFont.load_default()
+        font_banner = ImageFont.load_default()
 
     # ========== MAIN TEXT ==========
     line1 = "Happy Birthday"
-    line2 = name + "!"
+    line2 = f"{name}!"
 
-    # Calculate center position
-    def get_text_size(text, font):
+    # Helper to get text size
+    def text_size(text, font):
         try:
             bbox = draw.textbbox((0, 0), text, font=font)
             return bbox[2] - bbox[0], bbox[3] - bbox[1]
         except:
-            return 400, 80
+            return len(text) * 40, 60
 
-    w1, h1 = get_text_size(line1, font_main)
-    w2, h2 = get_text_size(line2, font_main)
+    w1, h1 = text_size(line1, font_main)
+    w2, h2 = text_size(line2, font_main)
 
     x1 = (width - w1) // 2
     x2 = (width - w2) // 2
-    y1 = 180
-    y2 = y1 + h1 + 20
+    y1 = 200
+    y2 = y1 + h1 + 25
 
-    # Strong black shadow
-    for offset in range(6, 0, -1):
-        draw.text((x1 + offset, y1 + offset), line1, font=font_main, fill=(0, 0, 0))
-        draw.text((x2 + offset, y2 + offset), line2, font=font_main, fill=(0, 0, 0))
+    # Draw strong shadow
+    for i in range(8, 0, -1):
+        draw.text((x1 + i, y1 + i), line1, font=font_main, fill=(0, 0, 0))
+        draw.text((x2 + i, y2 + i), line2, font=font_main, fill=(0, 0, 0))
 
     # Bright gold text
     draw.text((x1, y1), line1, font=font_main, fill="#FFD700")
@@ -110,17 +109,16 @@ def create_thumbnail(name: str, output_path: str = "generated/thumbnail.jpg"):
     draw.rectangle([0, 600, width, 720], fill=(0, 0, 0))
 
     banner = "Elegant Birthday Video  •  4K"
-    bw, bh = get_text_size(banner, font_sub)
-    draw.text(((width - bw) // 2, 640), banner, font=font_sub, fill="white")
+    bw, bh = text_size(banner, font_banner)
+    draw.text(((width - bw) // 2, 640), banner, font=font_banner, fill="white")
 
     # Decorative circles
-    draw.ellipse([50, 50, 140, 140], fill="#FF69B4")
-    draw.ellipse([width-160, 60, width-60, 160], fill="#FFD700")
+    draw.ellipse([40, 40, 140, 140], fill="#FF69B4")
+    draw.ellipse([width - 160, 50, width - 50, 160], fill="#FFD700")
 
-    os.makedirs(os.path.dirname(output_path) or "generated", exist_ok=True)
+    os.makedirs("generated", exist_ok=True)
     img.save(output_path, quality=95)
     return output_path
-
 
 def get_or_create_playlist(youtube, title: str, description: str = ""):
     """Get existing playlist or create new one"""
