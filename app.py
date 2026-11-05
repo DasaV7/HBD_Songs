@@ -315,22 +315,41 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         time.sleep(2)
         st.rerun()
 
-# ====================== RESULTS TABLE ======================
+# ====================== RESULTS ======================
 if st.session_state.batch_results:
     st.markdown("---")
-    st.markdown("### Upload Results")
+    st.markdown("### Results")
 
+    # 1. Show Video Previews first (they stay visible)
+    st.markdown("#### Video Previews")
+    for res in st.session_state.batch_results:
+        with st.container():
+            st.markdown(f"**{res['name']}** — {res['status']}")
+            
+            if res.get("video_path") and os.path.exists(res["video_path"]):
+                st.video(res["video_path"])
+            
+            if res.get("link"):
+                st.markdown(f"[▶ Watch on YouTube]({res['link']})")
+            
+            st.markdown("---")
+
+    # 2. Show Status Table below the videos
+    st.markdown("#### Upload Status Table")
+    
     table_data = []
     for res in st.session_state.batch_results:
         table_data.append({
             "Name": res["name"],
             "Status": res["status"],
-            "Upload Date & Time": res.get("upload_time", "-"),
+            "Date & Time": res.get("upload_time", "-"),
             "YouTube Link": res["link"] if res.get("link") else "-"
         })
 
     st.dataframe(
         table_data,
         use_container_width=True,
-        column_config={"YouTube Link": st.column_config.LinkColumn("YouTube Link")}
+        column_config={
+            "YouTube Link": st.column_config.LinkColumn("YouTube Link")
+        }
     )
