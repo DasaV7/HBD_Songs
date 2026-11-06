@@ -158,7 +158,7 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     end_text = (
         "Thank You for Watching!\n\n"
         "Please Like • Share • Comment\n"
-        "And Subscribe for more videos\n\n"
+        "Subscribe for more videos\n\n"
         "Request Custom Video:\n"
         "https://hbdsongs.streamlit.app"
     )
