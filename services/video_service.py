@@ -43,55 +43,56 @@ def get_media_files(folder, extensions):
 def get_text_position(filename: str, is_end: bool = False):
     """
     Decide text position based on filename keywords.
-    Works with any separator: Top_Left, Top-Left, Top Left, topleft, etc.
+    Ensures text never goes outside the frame.
     Returns (x, y, align)
     """
     name = filename.lower()
     name = name.replace("_", " ").replace("-", " ").replace(".", " ")
 
+    # Safe boundaries
+    LEFT_X = 70
+    RIGHT_X = 1180          # Never go beyond this
+    TOP_Y = 130
+    BOTTOM_Y = 390
+    MIDDLE_Y = 270
+
     # Default (Left)
-    x = 70
+    x = LEFT_X
     y = 150 if is_end else 230
     align = "left"
 
     # Full position keywords
     if "top left" in name:
-        # Text → Bottom Right (right justified)
-        x = 1210
-        y = 390
+        # Text → Bottom Right
+        x = RIGHT_X
+        y = BOTTOM_Y
         align = "right"
     elif "top right" in name:
         # Text → Bottom Left
-        x = 70
-        y = 390
+        x = LEFT_X
+        y = BOTTOM_Y
         align = "left"
     elif "bottom left" in name:
-        # Text → Top Right (right justified)
-        x = 1210
-        y = 130
+        # Text → Top Right
+        x = RIGHT_X
+        y = TOP_Y
         align = "right"
     elif "bottom right" in name:
         # Text → Top Left
-        x = 70
-        y = 130
+        x = LEFT_X
+        y = TOP_Y
         align = "left"
 
     # Only Left / Right
     elif "left" in name and "right" not in name:
-        # Text on Right side, vertically middle (right justified)
-        x = 1210
-        y = 270
+        # Text on Right side
+        x = RIGHT_X
+        y = MIDDLE_Y
         align = "right"
     elif "right" in name and "left" not in name:
-        # Text on Left side, vertically middle
-        x = 70
-        y = 270
-        align = "left"
-
-    # No keyword → default Left
-    else:
-        x = 70
-        y = 150 if is_end else 230
+        # Text on Left side
+        x = LEFT_X
+        y = MIDDLE_Y
         align = "left"
 
     return x, y, align
