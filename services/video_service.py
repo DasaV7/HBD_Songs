@@ -42,60 +42,31 @@ def get_media_files(folder, extensions):
 
 def get_text_position(filename: str, is_end: bool = False):
     """
-    Decide text position based on filename keywords.
-    Ensures text never goes outside the frame.
-    Returns (x, y, align)
+    Returns preferred (x, y, align) based on filename.
     """
-    name = filename.lower()
-    name = name.replace("_", " ").replace("-", " ").replace(".", " ")
+    name = filename.lower().replace("_", " ").replace("-", " ").replace(".", " ")
 
-    # Safe boundaries
     LEFT_X = 70
-    RIGHT_X = 1180          # Never go beyond this
+    RIGHT_X = 1210
     TOP_Y = 130
-    BOTTOM_Y = 390
-    MIDDLE_Y = 270
+    BOTTOM_Y = 380
+    MIDDLE_Y = 260
 
-    # Default (Left)
-    x = LEFT_X
-    y = 150 if is_end else 230
-    align = "left"
-
-    # Full position keywords
     if "top left" in name:
-        # Text → Bottom Right
-        x = RIGHT_X
-        y = BOTTOM_Y
-        align = "right"
+        return RIGHT_X, BOTTOM_Y, "right"
     elif "top right" in name:
-        # Text → Bottom Left
-        x = LEFT_X
-        y = BOTTOM_Y
-        align = "left"
+        return LEFT_X, BOTTOM_Y, "left"
     elif "bottom left" in name:
-        # Text → Top Right
-        x = RIGHT_X
-        y = TOP_Y
-        align = "right"
+        return RIGHT_X, TOP_Y, "right"
     elif "bottom right" in name:
-        # Text → Top Left
-        x = LEFT_X
-        y = TOP_Y
-        align = "left"
-
-    # Only Left / Right
+        return LEFT_X, TOP_Y, "left"
     elif "left" in name and "right" not in name:
-        # Text on Right side
-        x = RIGHT_X
-        y = MIDDLE_Y
-        align = "right"
+        return RIGHT_X, MIDDLE_Y, "right"
     elif "right" in name and "left" not in name:
-        # Text on Left side
-        x = LEFT_X
-        y = MIDDLE_Y
-        align = "left"
-
-    return x, y, align
+        return LEFT_X, MIDDLE_Y, "left"
+    else:
+        # Default
+        return LEFT_X, 150 if is_end else 230, "left"
     
 def create_slide(text, background, duration, output_file, is_end=False):
     img = Image.open(background).convert("RGBA")
@@ -104,14 +75,10 @@ def create_slide(text, background, duration, output_file, is_end=False):
     # Soft dark overlay
     dark = Image.new("RGBA", img.size, (0, 0, 0, 95))
     img = Image.alpha_composite(img, dark)
-
     draw = ImageDraw.Draw(img)
 
     # Font size
-    if is_end:
-        font_size = 46
-    else:
-        font_size = 68
+    font_size = 44 if is_end else 66
 
     font = None
     for fpath in FONT_CANDIDATES:
@@ -123,11 +90,43 @@ def create_slide(text, background, duration, output_file, is_end=False):
     if font is None:
         font = ImageFont.load_default()
 
-    # Get smart position from filename
+    # Get preferred position
     filename = os.path.basename(background)
     x_pos, y_pos, align = get_text_position(filename, is_end=is_end)
 
-    # Soft shadow
+    # ========== SAFE TEXT PLACEMENT ==========
+    # Measure text size
+    try:
+        bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=12, align=align)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+    except:
+        text_width = 600
+        text_height = 150
+
+    # Safe margins inside the frame
+    MIN_X = 50
+    MAX_X = 1230
+    MIN_Y = 110
+    MAX_Y = 600
+
+    if align == "right":
+        # x_pos is the right edge
+        right_edge = min(x_pos, MAX_X)
+        left_edge = right_edge - text_width
+        if left_edge < MIN_X:
+            right_edge = MIN_X + text_width
+            if right_edge > MAX_X:
+                right_edge = MAX_X
+        x_pos = right_edge
+    else:
+        # x_pos is the left edge
+        x_pos = max(MIN_X, min(x_pos, MAX_X - text_width))
+
+    # Vertical safety
+    y_pos = max(MIN_Y, min(y_pos, MAX_Y - text_height))
+
+    # Draw shadow
     draw.multiline_text(
         (x_pos + 3, y_pos + 3),
         text,
@@ -136,8 +135,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         spacing=12,
         align=align
     )
-    
-    # Main text
+    # Draw main text
     draw.multiline_text(
         (x_pos, y_pos),
         text,
@@ -151,7 +149,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
     if is_end:
         draw.rounded_rectangle((30, 90, 1250, 630), radius=25, outline=(255, 255, 255, 160), width=3)
     else:
-        draw.rounded_rectangle((40, 120, 1240, 600), radius=25, outline=(255, 255, 255, 150), width=3)
+        draw.rounded_rectangle((40, 110, 1240, 610), radius=25, outline=(255, 255, 255, 150), width=3)
 
     img = img.convert("RGB")
     img.save(output_file, quality=90)
