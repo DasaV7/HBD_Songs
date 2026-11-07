@@ -81,7 +81,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
     filename = os.path.basename(background)
     side, y_pos = get_text_position(filename, is_end=is_end)
 
-    # Measure text width
+    # Measure text
     try:
         bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=12)
         text_width = bbox[2] - bbox[0]
@@ -90,17 +90,15 @@ def create_slide(text, background, duration, output_file, is_end=False):
         text_width = 500
         text_height = 140
 
-    # ========== FINAL POSITIONING ==========
+    # ========== POSITIONING ==========
     if side == "right":
-        # Text should END at the right side of the frame
+        # Text block should end at the right side
         right_edge = 1200
-        x_pos = right_edge - text_width
-        # Safety
-        if x_pos < 60:
-            x_pos = 60
+        x_pos = right_edge          # ← This is the RIGHT edge
+        align = "right"
     else:
-        # Left side
         x_pos = 80
+        align = "left"
 
     # Vertical safety
     y_pos = max(120, min(y_pos, 580 - text_height))
@@ -112,7 +110,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         font=font,
         fill=(0, 0, 0, 180),
         spacing=12,
-        align="left"
+        align=align
     )
 
     # Main text
@@ -122,7 +120,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         font=font,
         fill=random.choice(COLORS),
         spacing=12,
-        align="left"
+        align=align
     )
 
     # Frame
@@ -139,6 +137,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
             .fadein(0.8)
             .fadeout(0.8))
     return clip
+
 
 def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     repeats = max(1, min(5, int(repeats)))
