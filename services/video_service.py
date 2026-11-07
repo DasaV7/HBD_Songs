@@ -90,22 +90,23 @@ def create_slide(text, background, duration, output_file, is_end=False):
         text_width = 500
         text_height = 140
 
-    # ========== SAFE POSITIONING ==========
+    # ========== POSITIONING ==========
     if side == "right":
-        # Calculate where the text block should start so it ends at 1200
         right_edge = 1200
-        x_pos = right_edge - text_width
-        if x_pos < 60:
-            x_pos = 60
-        align = "left"          # We keep left here for safety
+        x_pos = right_edge                # Right edge of the text block
+        align = "right"                   # ← This makes shorter lines right-aligned
     else:
         x_pos = 80
         align = "left"
 
-    # Vertical safety
+    # Safety check
+    if side == "right" and (x_pos - text_width) < 60:
+        x_pos = 60 + text_width
+        x_pos = min(x_pos, 1200)
+
     y_pos = max(120, min(y_pos, 580 - text_height))
 
-    # Draw shadow
+    # Shadow
     draw.multiline_text(
         (x_pos + 3, y_pos + 3),
         text,
