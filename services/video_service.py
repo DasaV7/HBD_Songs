@@ -46,53 +46,52 @@ def get_text_position(filename: str, is_end: bool = False):
     Works with any separator: Top_Left, Top-Left, Top Left, topleft, etc.
     Returns (x, y, align)
     """
-    # Normalize filename: lowercase + replace common separators with space
     name = filename.lower()
     name = name.replace("_", " ").replace("-", " ").replace(".", " ")
 
-    # Default position
-    x = 60
-    y = 140 if is_end else 220
+    # Default (Left)
+    x = 70
+    y = 150 if is_end else 230
     align = "left"
 
-    # Full position keywords (highest priority)
+    # Full position keywords
     if "top left" in name:
-        # Text goes to Bottom Right
-        x = 620
-        y = 380
+        # Text → Bottom Right (right justified)
+        x = 1210
+        y = 390
         align = "right"
     elif "top right" in name:
-        # Text goes to Bottom Left
-        x = 60
-        y = 380
+        # Text → Bottom Left
+        x = 70
+        y = 390
         align = "left"
     elif "bottom left" in name:
-        # Text goes to Top Right
-        x = 620
-        y = 120
+        # Text → Top Right (right justified)
+        x = 1210
+        y = 130
         align = "right"
     elif "bottom right" in name:
-        # Text goes to Top Left
-        x = 60
-        y = 120
+        # Text → Top Left
+        x = 70
+        y = 130
         align = "left"
 
     # Only Left / Right
     elif "left" in name and "right" not in name:
-        # Text on Right side, vertically middle
-        x = 620
-        y = 260
+        # Text on Right side, vertically middle (right justified)
+        x = 1210
+        y = 270
         align = "right"
     elif "right" in name and "left" not in name:
         # Text on Left side, vertically middle
-        x = 60
-        y = 260
+        x = 70
+        y = 270
         align = "left"
 
-    # No keyword → default Left Center
+    # No keyword → default Left
     else:
-        x = 60
-        y = 140 if is_end else 220
+        x = 70
+        y = 150 if is_end else 230
         align = "left"
 
     return x, y, align
