@@ -43,7 +43,7 @@ def get_text_position(filename: str, is_end: bool = False):
     name = filename.lower().replace("_", " ").replace("-", " ").replace(".", " ")
 
     if "top left" in name:
-        return "right", 390          # side, y
+        return "right", 390
     elif "top right" in name:
         return "left", 390
     elif "bottom left" in name:
@@ -90,12 +90,14 @@ def create_slide(text, background, duration, output_file, is_end=False):
         text_width = 500
         text_height = 140
 
-    # ========== POSITIONING ==========
+    # ========== SAFE POSITIONING ==========
     if side == "right":
-        # Text block should end at the right side
+        # Calculate where the text block should start so it ends at 1200
         right_edge = 1200
-        x_pos = right_edge          # ← This is the RIGHT edge
-        align = "right"
+        x_pos = right_edge - text_width
+        if x_pos < 60:
+            x_pos = 60
+        align = "left"          # We keep left here for safety
     else:
         x_pos = 80
         align = "left"
