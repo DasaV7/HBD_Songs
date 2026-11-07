@@ -42,26 +42,20 @@ def get_media_files(folder, extensions):
 def get_text_position(filename: str, is_end: bool = False):
     name = filename.lower().replace("_", " ").replace("-", " ").replace(".", " ")
 
-    LEFT_X = 80
-    RIGHT_X = 1200          # This will be the RIGHT EDGE of the text
-    TOP_Y = 150
-    BOTTOM_Y = 390
-    MIDDLE_Y = 280
-
     if "top left" in name:
-        return RIGHT_X, BOTTOM_Y, "right"
+        return "right", 390          # side, y
     elif "top right" in name:
-        return LEFT_X, BOTTOM_Y, "left"
+        return "left", 390
     elif "bottom left" in name:
-        return RIGHT_X, TOP_Y, "right"
+        return "right", 150
     elif "bottom right" in name:
-        return LEFT_X, TOP_Y, "left"
+        return "left", 150
     elif "left" in name and "right" not in name:
-        return RIGHT_X, MIDDLE_Y, "right"
+        return "right", 280
     elif "right" in name and "left" not in name:
-        return LEFT_X, MIDDLE_Y, "left"
+        return "left", 280
     else:
-        return LEFT_X, 160 if is_end else 240, "left"
+        return "left", 160 if is_end else 240
 
 
 def create_slide(text, background, duration, output_file, is_end=False):
@@ -85,30 +79,30 @@ def create_slide(text, background, duration, output_file, is_end=False):
         font = ImageFont.load_default()
 
     filename = os.path.basename(background)
-    x_pos, y_pos, align = get_text_position(filename, is_end=is_end)
+    side, y_pos = get_text_position(filename, is_end=is_end)
 
-    # Measure text
+    # Measure text width
     try:
-        bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=12, align=align)
+        bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=12)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
     except:
         text_width = 500
         text_height = 140
 
-    # ========== FINAL SAFE POSITIONING ==========
-    if align == "right":
-        # x_pos is the RIGHT edge of the text
-        # We keep it near the white frame
-        x_pos = min(x_pos, 1200)
-
-        # Only pull it left if the text is extremely long
-        if x_pos - text_width < 60:
-            x_pos = 60 + text_width
-            x_pos = min(x_pos, 1200)
+    # ========== FINAL POSITIONING ==========
+    if side == "right":
+        # Text should END at the right side of the frame
+        right_edge = 1200
+        x_pos = right_edge - text_width
+        # Safety
+        if x_pos < 60:
+            x_pos = 60
     else:
-        x_pos = max(60, min(x_pos, 1200 - text_width))
+        # Left side
+        x_pos = 80
 
+    # Vertical safety
     y_pos = max(120, min(y_pos, 580 - text_height))
 
     # Draw shadow
@@ -118,7 +112,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         font=font,
         fill=(0, 0, 0, 180),
         spacing=12,
-        align=align
+        align="left"
     )
 
     # Main text
@@ -128,7 +122,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         font=font,
         fill=random.choice(COLORS),
         spacing=12,
-        align=align
+        align="left"
     )
 
     # Frame
