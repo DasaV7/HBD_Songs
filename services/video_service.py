@@ -136,6 +136,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         spacing=12,
         align=align
     )
+    
     # Main text
     draw.multiline_text(
         (x_pos, y_pos),
