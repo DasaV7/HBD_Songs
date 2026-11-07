@@ -90,19 +90,16 @@ def create_slide(text, background, duration, output_file, is_end=False):
         text_width = 500
         text_height = 140
 
-    # ========== POSITIONING ==========
+    # ========== SAFE POSITIONING (no overflow) ==========
     if side == "right":
         right_edge = 1200
-        x_pos = right_edge                # Right edge of the text block
-        align = "right"                   # ← This makes shorter lines right-aligned
+        x_pos = right_edge - text_width
+        if x_pos < 60:
+            x_pos = 60
+        align = "left"
     else:
         x_pos = 80
         align = "left"
-
-    # Safety check
-    if side == "right" and (x_pos - text_width) < 60:
-        x_pos = 60 + text_width
-        x_pos = min(x_pos, 1200)
 
     y_pos = max(120, min(y_pos, 580 - text_height))
 
@@ -140,7 +137,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
             .fadein(0.8)
             .fadeout(0.8))
     return clip
-
+    
 
 def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     repeats = max(1, min(5, int(repeats)))
