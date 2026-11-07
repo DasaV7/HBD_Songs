@@ -43,7 +43,7 @@ def get_text_position(filename: str, is_end: bool = False):
     name = filename.lower().replace("_", " ").replace("-", " ").replace(".", " ")
 
     LEFT_X = 80
-    RIGHT_X = 1180          # Safe right edge
+    RIGHT_X = 1200          # This will be the RIGHT EDGE of the text
     TOP_Y = 150
     BOTTOM_Y = 390
     MIDDLE_Y = 280
@@ -68,12 +68,11 @@ def create_slide(text, background, duration, output_file, is_end=False):
     img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 95))
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 90))
     img = Image.alpha_composite(img, dark)
     draw = ImageDraw.Draw(img)
 
-    # Font size
-    font_size = 40 if is_end else 60
+    font_size = 40 if is_end else 58
 
     font = None
     for fpath in FONT_CANDIDATES:
@@ -95,25 +94,22 @@ def create_slide(text, background, duration, output_file, is_end=False):
         text_height = bbox[3] - bbox[1]
     except:
         text_width = 500
-        text_height = 150
+        text_height = 140
 
-    # ========== STRICT SAFE AREA ==========
-    SAFE_LEFT = 70
-    SAFE_RIGHT = 1210
-    SAFE_TOP = 120
-    SAFE_BOTTOM = 580
-
+    # ========== FINAL SAFE POSITIONING ==========
     if align == "right":
-        # Force right edge to stay inside the frame
-        x_pos = min(x_pos, SAFE_RIGHT)
-        # Ensure the whole text block fits
-        if (x_pos - text_width) < SAFE_LEFT:
-            x_pos = SAFE_LEFT + text_width
-            x_pos = min(x_pos, SAFE_RIGHT)
-    else:
-        x_pos = max(SAFE_LEFT, min(x_pos, SAFE_RIGHT - text_width))
+        # x_pos is the RIGHT edge of the text
+        # We keep it near the white frame
+        x_pos = min(x_pos, 1200)
 
-    y_pos = max(SAFE_TOP, min(y_pos, SAFE_BOTTOM - text_height))
+        # Only pull it left if the text is extremely long
+        if x_pos - text_width < 60:
+            x_pos = 60 + text_width
+            x_pos = min(x_pos, 1200)
+    else:
+        x_pos = max(60, min(x_pos, 1200 - text_width))
+
+    y_pos = max(120, min(y_pos, 580 - text_height))
 
     # Draw shadow
     draw.multiline_text(
