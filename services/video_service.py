@@ -14,6 +14,7 @@ from moviepy.editor import (
 from PIL import ImageDraw, ImageFont
 import random
 import os
+import re
 
 
 COLORS = [
@@ -39,12 +40,69 @@ def get_media_files(folder, extensions):
     ]
 
 
+def get_text_position(filename: str, is_end: bool = False):
+    """
+    Decide text position based on filename keywords.
+    Works with any separator: Top_Left, Top-Left, Top Left, topleft, etc.
+    Returns (x, y, align)
+    """
+    # Normalize filename: lowercase + replace common separators with space
+    name = filename.lower()
+    name = name.replace("_", " ").replace("-", " ").replace(".", " ")
+
+    # Default position
+    x = 60
+    y = 140 if is_end else 220
+    align = "left"
+
+    # Full position keywords (highest priority)
+    if "top left" in name:
+        # Text goes to Bottom Right
+        x = 620
+        y = 380
+        align = "right"
+    elif "top right" in name:
+        # Text goes to Bottom Left
+        x = 60
+        y = 380
+        align = "left"
+    elif "bottom left" in name:
+        # Text goes to Top Right
+        x = 620
+        y = 120
+        align = "right"
+    elif "bottom right" in name:
+        # Text goes to Top Left
+        x = 60
+        y = 120
+        align = "left"
+
+    # Only Left / Right
+    elif "left" in name and "right" not in name:
+        # Text on Right side, vertically middle
+        x = 620
+        y = 260
+        align = "right"
+    elif "right" in name and "left" not in name:
+        # Text on Left side, vertically middle
+        x = 60
+        y = 260
+        align = "left"
+
+    # No keyword → default Left Center
+    else:
+        x = 60
+        y = 140 if is_end else 220
+        align = "left"
+
+    return x, y, align
+    
 def create_slide(text, background, duration, output_file, is_end=False):
     img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    # Dark overlay
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 100))
+    # Soft dark overlay
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 95))
     img = Image.alpha_composite(img, dark)
 
     draw = ImageDraw.Draw(img)
@@ -52,10 +110,8 @@ def create_slide(text, background, duration, output_file, is_end=False):
     # Font size
     if is_end:
         font_size = 46
-        y_pos = 140
     else:
         font_size = 68
-        y_pos = 220
 
     font = None
     for fpath in FONT_CANDIDATES:
@@ -67,25 +123,34 @@ def create_slide(text, background, duration, output_file, is_end=False):
     if font is None:
         font = ImageFont.load_default()
 
-    x_pos = 60
+    # Get smart position from filename
+    filename = os.path.basename(background)
+    x_pos, y_pos, align = get_text_position(filename, is_end=is_end)
 
     # Soft shadow
     draw.multiline_text(
-        (x_pos + 3, y_pos + 3), text,
-        font=font, fill=(0, 0, 0, 180),
-        spacing=12, align="center"
+        (x_pos + 3, y_pos + 3),
+        text,
+        font=font,
+        fill=(0, 0, 0, 180),
+        spacing=12,
+        align=align
     )
+    # Main text
     draw.multiline_text(
-        (x_pos, y_pos), text,
-        font=font, fill=random.choice(COLORS),
-        spacing=12, align="center"
+        (x_pos, y_pos),
+        text,
+        font=font,
+        fill=random.choice(COLORS),
+        spacing=12,
+        align=align
     )
 
-    # Bigger frame for End slide
+    # Frame
     if is_end:
-        draw.rounded_rectangle((30, 100, 1250, 620), radius=25, outline=(255, 255, 255, 160), width=3)
+        draw.rounded_rectangle((30, 90, 1250, 630), radius=25, outline=(255, 255, 255, 160), width=3)
     else:
-        draw.rounded_rectangle((40, 140, 1240, 580), radius=25, outline=(255, 255, 255, 150), width=3)
+        draw.rounded_rectangle((40, 120, 1240, 600), radius=25, outline=(255, 255, 255, 150), width=3)
 
     img = img.convert("RGB")
     img.save(output_file, quality=90)
@@ -158,7 +223,7 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     end_text = (
         "Thank You for Watching!\n\n"
         "Please Like • Share • Comment\n"
-        "Subscribe for more videos\n\n"
+        "And Subscribe for more videos\n\n"
         "Request Custom Video:\n"
         "https://hbdsongs.streamlit.app"
     )
