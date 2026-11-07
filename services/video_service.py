@@ -39,18 +39,14 @@ def get_media_files(folder, extensions):
         if f.lower().endswith(extensions)
     ]
 
-
 def get_text_position(filename: str, is_end: bool = False):
-    """
-    Returns preferred (x, y, align) based on filename.
-    """
     name = filename.lower().replace("_", " ").replace("-", " ").replace(".", " ")
 
-    LEFT_X = 70
-    RIGHT_X = 1100          # ← Reduced from 1210 to prevent overflow
-    TOP_Y = 140
-    BOTTOM_Y = 380
-    MIDDLE_Y = 270
+    LEFT_X = 80
+    RIGHT_X = 1180          # Safe right edge
+    TOP_Y = 150
+    BOTTOM_Y = 390
+    MIDDLE_Y = 280
 
     if "top left" in name:
         return RIGHT_X, BOTTOM_Y, "right"
@@ -72,13 +68,12 @@ def create_slide(text, background, duration, output_file, is_end=False):
     img = Image.open(background).convert("RGBA")
     img = img.resize((1280, 720), Image.LANCZOS)
 
-    # Soft dark overlay
     dark = Image.new("RGBA", img.size, (0, 0, 0, 95))
     img = Image.alpha_composite(img, dark)
     draw = ImageDraw.Draw(img)
 
-    # Slightly smaller font for better fit
-    font_size = 42 if is_end else 62
+    # Font size
+    font_size = 40 if is_end else 60
 
     font = None
     for fpath in FONT_CANDIDATES:
@@ -95,31 +90,29 @@ def create_slide(text, background, duration, output_file, is_end=False):
 
     # Measure text
     try:
-        bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=14, align=align)
+        bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=12, align=align)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
     except:
-        text_width = 550
-        text_height = 160
+        text_width = 500
+        text_height = 150
 
-    # Strict safe area inside the white frame
-    SAFE_LEFT = 60
-    SAFE_RIGHT = 1220
+    # ========== STRICT SAFE AREA ==========
+    SAFE_LEFT = 70
+    SAFE_RIGHT = 1210
     SAFE_TOP = 120
-    SAFE_BOTTOM = 590
+    SAFE_BOTTOM = 580
 
     if align == "right":
-        # Force the right edge to stay inside
+        # Force right edge to stay inside the frame
         x_pos = min(x_pos, SAFE_RIGHT)
-        # Make sure the whole text fits
-        if x_pos - text_width < SAFE_LEFT:
+        # Ensure the whole text block fits
+        if (x_pos - text_width) < SAFE_LEFT:
             x_pos = SAFE_LEFT + text_width
-            if x_pos > SAFE_RIGHT:
-                x_pos = SAFE_RIGHT
+            x_pos = min(x_pos, SAFE_RIGHT)
     else:
         x_pos = max(SAFE_LEFT, min(x_pos, SAFE_RIGHT - text_width))
 
-    # Vertical safety
     y_pos = max(SAFE_TOP, min(y_pos, SAFE_BOTTOM - text_height))
 
     # Draw shadow
@@ -128,7 +121,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         text,
         font=font,
         fill=(0, 0, 0, 180),
-        spacing=14,
+        spacing=12,
         align=align
     )
 
@@ -138,7 +131,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         text,
         font=font,
         fill=random.choice(COLORS),
-        spacing=14,
+        spacing=12,
         align=align
     )
 
