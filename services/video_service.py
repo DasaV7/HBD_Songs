@@ -147,7 +147,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
         )
     else:
         draw.rounded_rectangle(
-            (25, 70, 1260, 650),          # ← Bigger box
+            (15, 70, 1260, 650),          # ← Bigger box
             radius=30,
             outline=(255, 255, 255, 160),
             width=2
