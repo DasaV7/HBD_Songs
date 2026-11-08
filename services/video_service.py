@@ -1,23 +1,22 @@
 # services/video_service.py
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.LANCZOS
+
 import numpy as np
-from moviepy.editor import ImageSequenceClip
+import random
+import os
+
 from moviepy.editor import (
     ImageClip,
     VideoFileClip,
     AudioFileClip,
+    ImageSequenceClip,
     concatenate_videoclips,
     concatenate_audioclips,
     CompositeVideoClip
 )
-
-from PIL import ImageDraw, ImageFont
-import random
-import os
-import re
 
 
 COLORS = [
@@ -93,12 +92,53 @@ def get_gif_category(filename: str) -> str:
     return "other"
 
 
+def load_gif_safely(gif_path, duration, scale_range=(0.5, 0.8)):
+    """Safely load a GIF and return a MoviePy clip or None"""
+    try:
+        pil_gif = Image.open(gif_path)
+        frames = []
+
+        try:
+            while True:
+                frame = pil_gif.convert("RGBA")
+                frames.append(np.array(frame))
+                pil_gif.seek(pil_gif.tell() + 1)
+        except EOFError:
+            pass
+
+        if len(frames) < 2:
+            return None
+
+        gif = ImageSequenceClip(frames, fps=10)
+
+        scale = random.uniform(*scale_range)
+        gif = gif.resize(scale)
+
+        max_x = max(20, 1280 - int(gif.w))
+        max_y = max(20, 720 - int(gif.h))
+        pos_x = random.randint(20, max_x)
+        pos_y = random.randint(20, max_y)
+
+        gif = gif.set_position((pos_x, pos_y))
+
+        if gif.duration < duration:
+            gif = gif.loop(duration=duration)
+        else:
+            gif = gif.subclip(0, duration)
+
+        gif = gif.set_opacity(0.72)
+        return gif
+
+    except Exception as e:
+        print(f"GIF skipped ({os.path.basename(gif_path)}): {e}")
+        return None
+
+
 def create_slide(text, background, duration, output_file, is_end=False, gif_overlays=None):
-    # ===== Background =====
+    # Background
     img = Image.open(background).convert("RGBA")
     img = fit_image_cover(img, (1280, 720))
 
-    # Soft dark overlay
     dark = Image.new("RGBA", img.size, (0, 0, 0, 80))
     img = Image.alpha_composite(img, dark)
     draw = ImageDraw.Draw(img)
@@ -119,7 +159,7 @@ def create_slide(text, background, duration, output_file, is_end=False, gif_over
     side, y_pos = get_text_position(filename, is_end=is_end)
     lines = text.split("\n")
 
-    # ===== Text Position =====
+    # Text position
     if side == "right":
         right_edge = 1190
         align = "right"
@@ -132,9 +172,7 @@ def create_slide(text, background, duration, output_file, is_end=False, gif_over
                     max_width = w
             except:
                 max_width = 500
-        x_pos = right_edge - max_width
-        if x_pos < 60:
-            x_pos = 60
+        x_pos = max(60, right_edge - max_width)
     else:
         x_pos = 80
         align = "left"
@@ -164,60 +202,17 @@ def create_slide(text, background, duration, output_file, is_end=False, gif_over
     img = img.convert("RGB")
     img.save(output_file, quality=90)
 
-    # ===== Base clip =====
+    # Base clip
     base_clip = ImageClip(output_file).set_duration(duration)
     clips = [base_clip]
 
-   # ===== Add 1 or 2 GIF overlays (SAFE VERSION) =====
+    # Add GIF overlays safely
     if gif_overlays:
         for gif_path in gif_overlays:
-            try:
-                # More reliable way to load GIFs
-                from moviepy.editor import ImageSequenceClip
-                from PIL import Image as PILImage
-                import numpy as np
-    
-                # Open GIF with Pillow
-                pil_gif = PILImage.open(gif_path)
-                frames = []
-                try:
-                    while True:
-                        frame = pil_gif.convert("RGBA")
-                        frames.append(np.array(frame))
-                        pil_gif.seek(pil_gif.tell() + 1)
-                except EOFError:
-                    pass
-    
-                if not frames:
-                    continue
-    
-                gif = ImageSequenceClip(frames, fps=12)
-                
-                # Scale GIF (not full screen)
-                scale = random.uniform(0.50, 0.80)
-                gif = gif.resize(scale)
-    
-                # Random position
-                max_x = max(20, 1280 - int(gif.w))
-                max_y = max(20, 720 - int(gif.h))
-                pos_x = random.randint(20, max_x)
-                pos_y = random.randint(20, max_y)
-    
-                gif = gif.set_position((pos_x, pos_y))
-    
-                # Match duration
-                if gif.duration < duration:
-                    gif = gif.loop(duration=duration)
-                else:
-                    gif = gif.subclip(0, duration)
-    
-                gif = gif.set_opacity(0.75)
-                clips.append(gif)
-    
-            except Exception as e:
-                print(f"GIF skipped ({os.path.basename(gif_path)}): {e}")
-                continue
-            
+            gif_clip = load_gif_safely(gif_path, duration)
+            if gif_clip:
+                clips.append(gif_clip)
+
     final_clip = CompositeVideoClip(clips, size=(1280, 720))
     final_clip = final_clip.fadein(0.7).fadeout(0.7)
     return final_clip
@@ -226,7 +221,6 @@ def create_slide(text, background, duration, output_file, is_end=False, gif_over
 def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     repeats = max(1, min(5, int(repeats)))
 
-    # Clean old files
     for f in os.listdir("generated"):
         if f.startswith("slide") or f.endswith((".mp4", ".png")):
             try:
@@ -251,7 +245,6 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     }
 
     def get_unique_gifs(count=2):
-        """Return 1 or 2 GIFs of different categories"""
         if not gif_files:
             return []
 
@@ -268,7 +261,6 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
             if len(selected) >= count:
                 break
 
-        # If we couldn't find enough unique, just take what we have
         if not selected and gif_files:
             selected = [random.choice(gif_files)]
             used_files["gifs"].append(os.path.basename(selected[0]))
@@ -277,14 +269,14 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
 
     base_clips = []
 
-    # 1. Intro
+    # Intro
     intro_text = f"A Special Birthday Video\nFor\n{name}"
     bg = background_images[0]
     used_files["images"].append(os.path.basename(bg))
     gifs = get_unique_gifs(count=random.choice([1, 2]))
     base_clips.append(create_slide(intro_text, bg, 7, "generated/slide_intro.png", gif_overlays=gifs))
 
-    # 2. Main slides
+    # Main slides
     main_texts = [
         f"Happy Birthday\n{name}",
         "Wishing You\nAll the Happiness",
@@ -304,7 +296,6 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
 
     base_video = concatenate_videoclips(base_clips, method="compose")
 
-    # Repeat
     if repeats > 1:
         main_part = concatenate_videoclips([base_video] * repeats, method="compose")
     else:
@@ -334,7 +325,6 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     audio = audio.subclip(0, total_duration)
     final_video = final_video.set_audio(audio)
 
-    # Export
     safe_name = "".join(c for c in name if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
     output_path = f"generated/{safe_name}.mp4"
 
