@@ -6,9 +6,11 @@ if not hasattr(Image, 'ANTIALIAS'):
 
 from moviepy.editor import (
     ImageClip,
+    VideoFileClip,
     AudioFileClip,
     concatenate_videoclips,
-    concatenate_audioclips
+    concatenate_audioclips,
+    CompositeVideoClip
 )
 
 from PIL import ImageDraw, ImageFont
@@ -39,6 +41,7 @@ def get_media_files(folder, extensions):
         if f.lower().endswith(extensions)
     ]
 
+
 def get_text_position(filename: str, is_end: bool = False):
     name = filename.lower().replace("_", " ").replace("-", " ").replace(".", " ")
 
@@ -58,16 +61,49 @@ def get_text_position(filename: str, is_end: bool = False):
         return "left", 160 if is_end else 240
 
 
-def create_slide(text, background, duration, output_file, is_end=False):
-    img = Image.open(background).convert("RGBA")
-    img = img.resize((1280, 720), Image.LANCZOS)
+def fit_image_cover(img: Image.Image, target_size=(1280, 720)) -> Image.Image:
+    target_w, target_h = target_size
+    img_w, img_h = img.size
+    scale = max(target_w / img_w, target_h / img_h)
+    new_w = int(img_w * scale)
+    new_h = int(img_h * scale)
+    img = img.resize((new_w, new_h), Image.LANCZOS)
+    left = (new_w - target_w) // 2
+    top = (new_h - target_h) // 2
+    return img.crop((left, top, left + target_w, top + target_h))
 
-    dark = Image.new("RGBA", img.size, (0, 0, 0, 90))
+
+def get_gif_category(filename: str) -> str:
+    name = filename.lower()
+    if "balloon" in name:
+        return "balloon"
+    if "firework" in name or "fire-work" in name or "ire-works" in name:
+        return "firework"
+    if "confetti" in name or "dots" in name:
+        return "confetti"
+    if "gift" in name:
+        return "gift"
+    if "sparkle" in name or "glitter" in name or "pattern" in name:
+        return "sparkle"
+    if "heart" in name:
+        return "heart"
+    if "celebration" in name or "happy" in name:
+        return "celebration"
+    return "other"
+
+
+def create_slide(text, background, duration, output_file, is_end=False, gif_overlays=None):
+    # ===== Background =====
+    img = Image.open(background).convert("RGBA")
+    img = fit_image_cover(img, (1280, 720))
+
+    # Soft dark overlay
+    dark = Image.new("RGBA", img.size, (0, 0, 0, 80))
     img = Image.alpha_composite(img, dark)
     draw = ImageDraw.Draw(img)
 
+    # Font
     font_size = 40 if is_end else 56
-
     font = None
     for fpath in FONT_CANDIDATES:
         try:
@@ -80,15 +116,12 @@ def create_slide(text, background, duration, output_file, is_end=False):
 
     filename = os.path.basename(background)
     side, y_pos = get_text_position(filename, is_end=is_end)
-
     lines = text.split("\n")
 
-    # ========== TRUE RIGHT ALIGNMENT (safe) ==========
+    # ===== Text Position =====
     if side == "right":
-        right_edge = 1190          # safe right edge inside white box
+        right_edge = 1190
         align = "right"
-
-        # Find the widest line
         max_width = 0
         for line in lines:
             try:
@@ -98,17 +131,13 @@ def create_slide(text, background, duration, output_file, is_end=False):
                     max_width = w
             except:
                 max_width = 500
-
-        # Calculate starting x so the longest line ends at right_edge
         x_pos = right_edge - max_width
         if x_pos < 60:
             x_pos = 60
-
     else:
         x_pos = 80
         align = "left"
 
-    # Vertical position
     try:
         bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=12)
         text_height = bbox[3] - bbox[1]
@@ -117,65 +146,78 @@ def create_slide(text, background, duration, output_file, is_end=False):
 
     y_pos = max(120, min(y_pos, 580 - text_height))
 
-    # Draw shadow
-    draw.multiline_text(
-        (x_pos + 3, y_pos + 3),
-        text,
-        font=font,
-        fill=(0, 0, 0, 180),
-        spacing=12,
-        align=align
-    )
+    # Draw text
+    draw.multiline_text((x_pos + 3, y_pos + 3), text, font=font,
+                        fill=(0, 0, 0, 180), spacing=12, align=align)
+    draw.multiline_text((x_pos, y_pos), text, font=font,
+                        fill=random.choice(COLORS), spacing=12, align=align)
 
-    # Main text
-    draw.multiline_text(
-        (x_pos, y_pos),
-        text,
-        font=font,
-        fill=random.choice(COLORS),
-        spacing=12,
-        align=align
-    )
-
-    # Frame (larger size)
+    # Frame
     if is_end:
-        draw.rounded_rectangle(
-            (20, 70, 1260, 650),          # ← Bigger box
-            radius=30,
-            outline=(255, 255, 255, 170),
-            width=1
-        )
+        draw.rounded_rectangle((20, 70, 1260, 650), radius=30,
+                               outline=(255, 255, 255, 170), width=2)
     else:
-        draw.rounded_rectangle(
-            (15, 70, 1260, 650),          # ← Bigger box
-            radius=30,
-            outline=(255, 255, 255, 160),
-            width=2
-        )
+        draw.rounded_rectangle((15, 70, 1260, 650), radius=30,
+                               outline=(255, 255, 255, 160), width=2)
 
     img = img.convert("RGB")
     img.save(output_file, quality=90)
 
-    clip = (ImageClip(output_file)
-            .set_duration(duration)
-            .fadein(0.8)
-            .fadeout(0.8))
-    return clip
-    
+    # ===== Base clip =====
+    base_clip = ImageClip(output_file).set_duration(duration)
+    clips = [base_clip]
+
+    # ===== Add 1 or 2 GIF overlays =====
+    if gif_overlays:
+        for gif_path in gif_overlays:
+            try:
+                gif = VideoFileClip(gif_path, has_mask=True)
+                
+                # Scale GIF nicely (not full screen)
+                scale = random.uniform(0.55, 0.85)
+                gif = gif.resize(scale)
+                
+                # Random position (avoid covering text too much)
+                max_x = 1280 - gif.w
+                max_y = 720 - gif.h
+                pos_x = random.randint(20, max(20, int(max_x)))
+                pos_y = random.randint(20, max(20, int(max_y)))
+                
+                gif = gif.set_position((pos_x, pos_y))
+                
+                # Loop to match duration
+                if gif.duration < duration:
+                    gif = gif.loop(duration=duration)
+                else:
+                    gif = gif.subclip(0, duration)
+                
+                # Soft transparency
+                gif = gif.set_opacity(0.78)
+                
+                clips.append(gif)
+            except Exception as e:
+                print(f"GIF overlay skipped: {e}")
+
+    final_clip = CompositeVideoClip(clips, size=(1280, 720))
+    final_clip = final_clip.fadein(0.7).fadeout(0.7)
+    return final_clip
+
 
 def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     repeats = max(1, min(5, int(repeats)))
 
     # Clean old files
     for f in os.listdir("generated"):
-        if f.startswith("slide") or f.endswith(".mp4"):
+        if f.startswith("slide") or f.endswith((".mp4", ".png")):
             try:
                 os.remove(os.path.join("generated", f))
             except:
                 pass
 
     audio = AudioFileClip(audio_file)
+
     background_images = get_media_files("assets/backgrounds", (".jpg", ".jpeg", ".png"))
+    gif_files = get_media_files("assets/overlays", (".gif",))
 
     if len(background_images) < 5:
         raise Exception("Need at least 5 background images")
@@ -185,15 +227,42 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     used_files = {
         "audio": os.path.basename(audio_file),
         "images": [],
-        "videos": []
+        "gifs": []
     }
+
+    def get_unique_gifs(count=2):
+        """Return 1 or 2 GIFs of different categories"""
+        if not gif_files:
+            return []
+
+        random.shuffle(gif_files)
+        selected = []
+        used_categories = set()
+
+        for gif in gif_files:
+            cat = get_gif_category(os.path.basename(gif))
+            if cat not in used_categories:
+                selected.append(gif)
+                used_categories.add(cat)
+                used_files["gifs"].append(os.path.basename(gif))
+            if len(selected) >= count:
+                break
+
+        # If we couldn't find enough unique, just take what we have
+        if not selected and gif_files:
+            selected = [random.choice(gif_files)]
+            used_files["gifs"].append(os.path.basename(selected[0]))
+
+        return selected
 
     base_clips = []
 
     # 1. Intro
     intro_text = f"A Special Birthday Video\nFor\n{name}"
-    base_clips.append(create_slide(intro_text, background_images[0], 7, "generated/slide_intro.png"))
-    used_files["images"].append(os.path.basename(background_images[0]))
+    bg = background_images[0]
+    used_files["images"].append(os.path.basename(bg))
+    gifs = get_unique_gifs(count=random.choice([1, 2]))
+    base_clips.append(create_slide(intro_text, bg, 7, "generated/slide_intro.png", gif_overlays=gifs))
 
     # 2. Main slides
     main_texts = [
@@ -210,7 +279,8 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
     for i, text in enumerate(main_texts):
         bg = background_images[(i + 1) % len(background_images)]
         used_files["images"].append(os.path.basename(bg))
-        base_clips.append(create_slide(text, bg, 12, f"generated/slide_{i}.png"))
+        gifs = get_unique_gifs(count=random.choice([1, 2]))
+        base_clips.append(create_slide(text, bg, 12, f"generated/slide_{i}.png", gif_overlays=gifs))
 
     base_video = concatenate_videoclips(base_clips, method="compose")
 
@@ -228,8 +298,10 @@ def create_video(name: str, message: str, audio_file: str, repeats: int = 1):
         "Request Custom Video:\n"
         "https://hbdsongs.streamlit.app"
     )
-    end_clip = create_slide(end_text, background_images[-1], 14, "generated/slide_end.png", is_end=True)
-    used_files["images"].append(os.path.basename(background_images[-1]))
+    end_bg = background_images[-1]
+    used_files["images"].append(os.path.basename(end_bg))
+    gifs = get_unique_gifs(count=1)
+    end_clip = create_slide(end_text, end_bg, 14, "generated/slide_end.png", is_end=True, gif_overlays=gifs)
 
     final_video = concatenate_videoclips([main_part, end_clip], method="compose")
 
