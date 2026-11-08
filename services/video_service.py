@@ -3,7 +3,8 @@
 from PIL import Image
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.LANCZOS
-
+import numpy as np
+from moviepy.editor import ImageSequenceClip
 from moviepy.editor import (
     ImageClip,
     VideoFileClip,
@@ -167,37 +168,56 @@ def create_slide(text, background, duration, output_file, is_end=False, gif_over
     base_clip = ImageClip(output_file).set_duration(duration)
     clips = [base_clip]
 
-    # ===== Add 1 or 2 GIF overlays =====
+   # ===== Add 1 or 2 GIF overlays (SAFE VERSION) =====
     if gif_overlays:
         for gif_path in gif_overlays:
             try:
-                gif = VideoFileClip(gif_path, has_mask=True)
+                # More reliable way to load GIFs
+                from moviepy.editor import ImageSequenceClip
+                from PIL import Image as PILImage
+                import numpy as np
+    
+                # Open GIF with Pillow
+                pil_gif = PILImage.open(gif_path)
+                frames = []
+                try:
+                    while True:
+                        frame = pil_gif.convert("RGBA")
+                        frames.append(np.array(frame))
+                        pil_gif.seek(pil_gif.tell() + 1)
+                except EOFError:
+                    pass
+    
+                if not frames:
+                    continue
+    
+                gif = ImageSequenceClip(frames, fps=12)
                 
-                # Scale GIF nicely (not full screen)
-                scale = random.uniform(0.55, 0.85)
+                # Scale GIF (not full screen)
+                scale = random.uniform(0.50, 0.80)
                 gif = gif.resize(scale)
-                
-                # Random position (avoid covering text too much)
-                max_x = 1280 - gif.w
-                max_y = 720 - gif.h
-                pos_x = random.randint(20, max(20, int(max_x)))
-                pos_y = random.randint(20, max(20, int(max_y)))
-                
+    
+                # Random position
+                max_x = max(20, 1280 - int(gif.w))
+                max_y = max(20, 720 - int(gif.h))
+                pos_x = random.randint(20, max_x)
+                pos_y = random.randint(20, max_y)
+    
                 gif = gif.set_position((pos_x, pos_y))
-                
-                # Loop to match duration
+    
+                # Match duration
                 if gif.duration < duration:
                     gif = gif.loop(duration=duration)
                 else:
                     gif = gif.subclip(0, duration)
-                
-                # Soft transparency
-                gif = gif.set_opacity(0.78)
-                
+    
+                gif = gif.set_opacity(0.75)
                 clips.append(gif)
+    
             except Exception as e:
-                print(f"GIF overlay skipped: {e}")
-
+                print(f"GIF skipped ({os.path.basename(gif_path)}): {e}")
+                continue
+            
     final_clip = CompositeVideoClip(clips, size=(1280, 720))
     final_clip = final_clip.fadein(0.7).fadeout(0.7)
     return final_clip
