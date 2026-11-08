@@ -81,34 +81,43 @@ def create_slide(text, background, duration, output_file, is_end=False):
     filename = os.path.basename(background)
     side, y_pos = get_text_position(filename, is_end=is_end)
 
-    # Measure text
-    try:
-        bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=12)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-    except:
-        text_width = 500
-        text_height = 140
+    lines = text.split("\n")
 
-    # ========== TRUE RIGHT ALIGNMENT ==========
+    # ========== TRUE RIGHT ALIGNMENT (safe) ==========
     if side == "right":
-        # Right edge of the white frame with safe padding
-        right_edge = 1190
-        x_pos = right_edge
+        right_edge = 1190          # safe right edge inside white box
         align = "right"
 
-        # Extra safety: if text is still too wide, pull it in
-        if text_width > (right_edge - 70):
-            x_pos = 70 + text_width
-            x_pos = min(x_pos, 1190)
+        # Find the widest line
+        max_width = 0
+        for line in lines:
+            try:
+                bbox = draw.textbbox((0, 0), line, font=font)
+                w = bbox[2] - bbox[0]
+                if w > max_width:
+                    max_width = w
+            except:
+                max_width = 500
+
+        # Calculate starting x so the longest line ends at right_edge
+        x_pos = right_edge - max_width
+        if x_pos < 60:
+            x_pos = 60
+
     else:
         x_pos = 80
         align = "left"
 
-    # Vertical safety
+    # Vertical position
+    try:
+        bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=12)
+        text_height = bbox[3] - bbox[1]
+    except:
+        text_height = 140
+
     y_pos = max(120, min(y_pos, 580 - text_height))
 
-    # Shadow
+    # Draw shadow
     draw.multiline_text(
         (x_pos + 3, y_pos + 3),
         text,
