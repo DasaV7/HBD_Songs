@@ -137,11 +137,21 @@ def create_slide(text, background, duration, output_file, is_end=False):
         align=align
     )
 
-    # Frame
+    # Frame (larger size)
     if is_end:
-        draw.rounded_rectangle((30, 90, 1250, 630), radius=25, outline=(255, 255, 255, 160), width=3)
+        draw.rounded_rectangle(
+            (20, 70, 1260, 650),          # ← Bigger box
+            radius=30,
+            outline=(255, 255, 255, 170),
+            width=3
+        )
     else:
-        draw.rounded_rectangle((40, 110, 1240, 610), radius=25, outline=(255, 255, 255, 150), width=3)
+        draw.rounded_rectangle(
+            (25, 90, 1255, 630),          # ← Bigger box
+            radius=30,
+            outline=(255, 255, 255, 160),
+            width=3
+        )
 
     img = img.convert("RGB")
     img.save(output_file, quality=90)
