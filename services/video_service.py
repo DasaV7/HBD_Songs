@@ -4,20 +4,19 @@ from PIL import Image, ImageDraw, ImageFont
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.LANCZOS
 
-import numpy as np
 import random
 import os
+import traceback
+
+# Create the folder immediately
+os.makedirs("generated", exist_ok=True)
 
 from moviepy.editor import (
     ImageClip,
-    VideoFileClip,
     AudioFileClip,
-    ImageSequenceClip,
     concatenate_videoclips,
-    concatenate_audioclips,
-    CompositeVideoClip
+    concatenate_audioclips
 )
-
 
 COLORS = [
     "#FF9AA2", "#FFDAC1", "#E2F0CB", "#B5EAD7",
