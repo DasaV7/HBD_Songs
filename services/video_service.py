@@ -66,7 +66,7 @@ def create_slide(text, background, duration, output_file, is_end=False):
     img = Image.alpha_composite(img, dark)
     draw = ImageDraw.Draw(img)
 
-    font_size = 40 if is_end else 58
+    font_size = 40 if is_end else 56
 
     font = None
     for fpath in FONT_CANDIDATES:
@@ -90,17 +90,22 @@ def create_slide(text, background, duration, output_file, is_end=False):
         text_width = 500
         text_height = 140
 
-    # ========== SAFE POSITIONING (no overflow) ==========
+    # ========== TRUE RIGHT ALIGNMENT ==========
     if side == "right":
-        right_edge = 1200
-        x_pos = right_edge - text_width
-        if x_pos < 60:
-            x_pos = 60
-        align = "left"
+        # Right edge of the white frame with safe padding
+        right_edge = 1190
+        x_pos = right_edge
+        align = "right"
+
+        # Extra safety: if text is still too wide, pull it in
+        if text_width > (right_edge - 70):
+            x_pos = 70 + text_width
+            x_pos = min(x_pos, 1190)
     else:
         x_pos = 80
         align = "left"
 
+    # Vertical safety
     y_pos = max(120, min(y_pos, 580 - text_height))
 
     # Shadow
