@@ -62,14 +62,31 @@ def get_text_position(filename: str, is_end: bool = False):
 
 
 def fit_image_cover(img: Image.Image, target_size=(1280, 720)) -> Image.Image:
+    """
+    Better version - less aggressive cropping
+    """
     target_w, target_h = target_size
     img_w, img_h = img.size
+
+    # Calculate scale to cover
     scale = max(target_w / img_w, target_h / img_h)
+
+    # Slightly reduce the scale so it doesn't zoom too much
+    scale = scale * 0.92
+
     new_w = int(img_w * scale)
     new_h = int(img_h * scale)
+
     img = img.resize((new_w, new_h), Image.LANCZOS)
+
+    # Center crop
     left = (new_w - target_w) // 2
     top = (new_h - target_h) // 2
+
+    # Safety
+    left = max(0, left)
+    top = max(0, top)
+
     return img.crop((left, top, left + target_w, top + target_h))
 
 
