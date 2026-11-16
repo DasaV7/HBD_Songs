@@ -191,7 +191,8 @@ def authenticate_user(
                     "success": True,
                     "user_id": row["user_id"],
                     "role": row["role"],
-                    "first_name": row["first_name"]
+                    "first_name": row["first_name"],
+                    "email": row["email"]
                 }
 
     return {
