@@ -1,4 +1,5 @@
 import smtplib
+import streamlit as st
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -65,5 +66,43 @@ Birthday Video Generator Team
     except Exception as e:
 
         print("Email Error:", e)
+
+from twilio.rest import Client
+
+def send_whatsapp_notification(
+        phone,
+        recipient_name,
+        youtube_url
+):
+
+    try:
+
+        client = Client(
+            st.secrets["TWILIO_ACCOUNT_SID"],
+            st.secrets["TWILIO_AUTH_TOKEN"]
+        )
+
+        message = client.messages.create(
+
+            body=(
+                f"🎂 Hello {recipient_name}!\n\n"
+                f"Your birthday video is ready.\n\n"
+                f"{youtube_url}"
+            ),
+
+            from_=st.secrets[
+                "TWILIO_WHATSAPP_NUMBER"
+            ],
+
+            to=f"whatsapp:{phone}"
+        )
+
+        return True
+
+    except Exception as e:
+
+        print("WhatsApp Error:", e)
+
+        return False
 
         return False
