@@ -288,5 +288,18 @@ def update_last_login(email):
         )
 
         return False
+def get_user_details(email):
 
+    spreadsheet = get_spreadsheet()
+    ws = spreadsheet.worksheet("Users")
+
+    records = ws.get_all_records()
+
+    for row in records:
+
+        if row["email"].lower() == email.lower():
+
+            return row
+
+    return None
 
