@@ -497,7 +497,35 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                         st.warning(
                             f"Video request log failed: {e}"
                         )
+                        
+                    try:
 
+                        user_row = get_user_details(
+                            st.session_state.email
+                        )
+                    
+                        send_email_notification(
+                            st.session_state.email,
+                            current_name,
+                            link
+                        )
+                    
+                        if (
+                            user_row and
+                            user_row["whatsapp_consent"]
+                        ):
+                    
+                            send_whatsapp_notification(
+                                user_row["phone"],
+                                current_name,
+                                link
+                            )
+                    
+                    except Exception as e:
+                    
+                        st.warning(
+                            f"Notification failed: {e}"
+                        )
                     # Only remove from Remaining in Daily mode
                     if is_daily:
                         remove_name_from_remaining(current_name)
