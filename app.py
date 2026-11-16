@@ -13,11 +13,10 @@ from services.sheets_service import (
     select_next_names,
     remove_name_from_remaining,
     add_to_history,
-    reset_remaining_from_master
-)
-from services.sheets_service import (
+    reset_remaining_from_master,
+    register_user,
     authenticate_user,
-    register_user
+    add_video_request
 )
 
 os.makedirs("generated", exist_ok=True)
@@ -38,56 +37,218 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== LOGIN SYSTEM ======================
+# ====================== LOGIN / REGISTRATION ======================
+
 def check_login():
+
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
+
+    if "role" not in st.session_state:
         st.session_state.role = None
+
+    if "user_id" not in st.session_state:
+        st.session_state.user_id = None
+
+    if "email" not in st.session_state:
+        st.session_state.email = None
+
+    if "first_name" not in st.session_state:
+        st.session_state.first_name = None
 
     if st.session_state.logged_in:
         return True
 
-    st.markdown('<div class="main-title">🎂 Birthday Video Generator</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">Please login to continue</div>', unsafe_allow_html=True)
-
+    st.markdown(
+        '<div class="main-title">🎂 Birthday Video Generator</div>',
+        unsafe_allow_html=True
+    )
 
     login_tab, register_tab = st.tabs(
-        ["Login", "Register"]
-        )
-    
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submit = st.form_submit_button("Login", use_container_width=True)
+        ["🔐 Login", "📝 Register"]
+    )
 
-        if submit:
-            admin_user = st.secrets.get("ADMIN_USERNAME", "admin")
-            admin_pass = st.secrets.get("ADMIN_PASSWORD", "admin123")
-            user_user = st.secrets.get("USER_USERNAME", "user")
-            user_pass = st.secrets.get("USER_PASSWORD", "user123")
+    # ================= LOGIN =================
 
-            if username == admin_user and password == admin_pass:
-                st.session_state.logged_in = True
-                st.session_state.role = "admin"
-                st.rerun()
-            elif username == user_user and password == user_pass:
-                st.session_state.logged_in = True
-                st.session_state.role = "user"
-                st.rerun()
-            else:
-                st.error("Invalid username or password")
+    with login_tab:
+
+        with st.form("login_form"):
+
+            email = st.text_input("Email")
+
+            password = st.text_input(
+                "Password",
+                type="password"
+            )
+
+            login_submit = st.form_submit_button(
+                "Login",
+                use_container_width=True
+            )
+
+            if login_submit:
+
+                result = authenticate_user(
+                    email,
+                    password
+                )
+
+                if result["success"]:
+
+                    st.session_state.logged_in = True
+                    st.session_state.role = result["role"]
+                    st.session_state.user_id = result["user_id"]
+                    st.session_state.email = result["email"]
+                    st.session_state.first_name = result["first_name"]
+
+                    st.success(
+                        f"Welcome {result['first_name']}"
+                    )
+
+                    st.rerun()
+
+                else:
+
+                    st.error(
+                        "Invalid email or password."
+                    )
+
+    # ================= REGISTER =================
+
+    with register_tab:
+
+        with st.form("registration_form"):
+
+            first_name = st.text_input(
+                "First Name *"
+            )
+
+            last_name = st.text_input(
+                "Last Name *"
+            )
+
+            email = st.text_input(
+                "Email *"
+            )
+
+            phone = st.text_input(
+                "Phone Number"
+            )
+
+            age = st.number_input(
+                "Age",
+                min_value=0,
+                max_value=120,
+                value=18
+            )
+
+            gender = st.selectbox(
+                "Gender",
+                [
+                    "Male",
+                    "Female",
+                    "Non-Binary",
+                    "Prefer Not To Disclose"
+                ]
+            )
+
+            password = st.text_input(
+                "Password *",
+                type="password"
+            )
+
+            confirm_password = st.text_input(
+                "Confirm Password *",
+                type="password"
+            )
+
+            whatsapp_consent = st.checkbox(
+                "I agree to receive video links via WhatsApp"
+            )
+
+            terms_accepted = st.checkbox(
+                """
+                I confirm that:
+
+                • I own or have permission to use submitted content
+
+                • I understand videos may be uploaded to YouTube
+
+                • AI-generated media may be included
+
+                • I accept the Terms & Conditions
+                """
+            )
+
+            register_submit = st.form_submit_button(
+                "Create Account",
+                use_container_width=True
+            )
+
+            if register_submit:
+
+                if not terms_accepted:
+
+                    st.error(
+                        "You must accept the terms."
+                    )
+
+                elif password != confirm_password:
+
+                    st.error(
+                        "Passwords do not match."
+                    )
+
+                elif len(password) < 6:
+
+                    st.error(
+                        "Password must be at least 6 characters."
+                    )
+
+                else:
+
+                    success, message = register_user(
+                        first_name,
+                        last_name,
+                        email,
+                        phone,
+                        age,
+                        gender,
+                        password,
+                        whatsapp_consent
+                    )
+
+                    if success:
+
+                        st.success(
+                            """
+                            Registration successful.
+                            Please login.
+                            """
+                        )
+
+                    else:
+
+                        st.error(message)
 
     st.stop()
+
 
 check_login()
 
 # ====================== HEADER ======================
 st.markdown('<div class="main-title">🎂 Birthday Video Generator</div>', unsafe_allow_html=True)
-st.markdown(f'<div class="sub-title">Logged in as: <b>{st.session_state.role.upper()}</b></div>', unsafe_allow_html=True)
+#st.markdown(f'<div class="sub-title">Logged in as: <b>{st.session_state.role.upper()}</b></div>', unsafe_allow_html=True)
+st.markdown(f'''<div class="sub-title">Welcome <b>{st.session_state.first_name}</b>&nbsp; | &nbsp;Role: <b>{st.session_state.role.upper()}</b></div>''',unsafe_allow_html=True)
 
 if st.sidebar.button("Logout"):
+
     st.session_state.logged_in = False
     st.session_state.role = None
+    st.session_state.user_id = None
+    st.session_state.email = None
+    st.session_state.first_name = None
+
     st.rerun()
 
 # ====================== SESSION STATE ======================
@@ -152,7 +313,23 @@ with tab1:
     with col1:
         max_videos = st.selectbox("Number of videos", [2, 5, 10], index=0, key="manual_max")
     with col2:
-        auto_upload = st.selectbox("Auto Upload", ["Enabled", "Disabled"], index=0, key="manual_upload")
+    
+        if st.session_state.role == "admin":
+    
+            auto_upload = st.selectbox(
+                "Auto Upload",
+                ["Enabled", "Disabled"],
+                index=0,
+                key="manual_upload"
+            )
+    
+        else:
+    
+            auto_upload = "Enabled"
+    
+            st.info(
+                "Auto Upload is required for user accounts."
+            )
     with col3:
         repeats = st.selectbox("Length Multiplier", [1, 2, 3], index=0, key="manual_repeats")
 
@@ -301,6 +478,22 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
 
                     # Always log to History
                     add_to_history(current_name, link or "")
+                    try:
+                        add_video_request(
+                            st.session_state.user_id,
+                            st.session_state.email,
+                            current_name,
+                            personalized_message,
+                            os.path.basename(video_path),
+                            link or "",
+                            "Uploaded"
+                        )
+                    
+                    except Exception as e:
+                    
+                        st.warning(
+                            f"Video request log failed: {e}"
+                        )
 
                     # Only remove from Remaining in Daily mode
                     if is_daily:
