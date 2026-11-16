@@ -15,6 +15,10 @@ from services.sheets_service import (
     add_to_history,
     reset_remaining_from_master
 )
+from services.sheets_service import (
+    authenticate_user,
+    register_user
+)
 
 os.makedirs("generated", exist_ok=True)
 
@@ -46,6 +50,11 @@ def check_login():
     st.markdown('<div class="main-title">🎂 Birthday Video Generator</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Please login to continue</div>', unsafe_allow_html=True)
 
+
+    login_tab, register_tab = st.tabs(
+        ["Login", "Register"]
+        )
+    
     with st.form("login_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
