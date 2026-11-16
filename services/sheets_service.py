@@ -5,6 +5,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import json
+import bcrypt
+import uuid
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -114,3 +116,120 @@ def reset_remaining_from_master():
         return len(master_names)
     except Exception as e:
         raise Exception(f"Failed to reset Remaining list: {e}")
+
+def register_user(
+    first_name,
+    last_name,
+    email,
+    phone,
+    age,
+    gender,
+    password,
+    whatsapp_consent=True
+):
+
+    spreadsheet = get_spreadsheet()
+    ws = spreadsheet.worksheet("Users")
+
+    existing = ws.get_all_records()
+
+    for row in existing:
+        if row["email"].lower() == email.lower():
+            return False, "Email already registered"
+
+    password_hash = bcrypt.hashpw(
+        password.encode(),
+        bcrypt.gensalt()
+    ).decode()
+
+    user_id = f"USR{str(uuid.uuid4())[:8]}"
+
+    now = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    ws.append_row([
+        user_id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        age,
+        gender,
+        password_hash,
+        "user",
+        whatsapp_consent,
+        True,
+        "Active",
+        now,
+        ""
+    ])
+
+    return True, user_id
+
+def authenticate_user(
+    email,
+    password
+):
+
+    spreadsheet = get_spreadsheet()
+
+    ws = spreadsheet.worksheet("Users")
+
+    records = ws.get_all_records()
+
+    for row in records:
+
+        if row["email"].lower() == email.lower():
+
+            if bcrypt.checkpw(
+                password.encode(),
+                row["password_hash"].encode()
+            ):
+
+                return {
+                    "success": True,
+                    "user_id": row["user_id"],
+                    "role": row["role"],
+                    "first_name": row["first_name"]
+                }
+
+    return {
+        "success": False
+    }
+def add_video_request(
+    user_id,
+    email,
+    recipient_name,
+    message,
+    video_file="",
+    youtube_url="",
+    status="Pending"
+):
+
+    spreadsheet = get_spreadsheet()
+
+    ws = spreadsheet.worksheet(
+        "VideoRequests"
+    )
+
+    request_id = f"REQ{str(uuid.uuid4())[:8]}"
+
+    now = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    ws.append_row([
+        request_id,
+        user_id,
+        email,
+        recipient_name,
+        message,
+        video_file,
+        youtube_url,
+        status,
+        now,
+        ""
+    ])
+
+
