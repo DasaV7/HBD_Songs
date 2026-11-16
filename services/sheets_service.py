@@ -13,6 +13,9 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
+ADMIN_EMAILS = [
+    "your_email@gmail.com"
+]
 
 def get_sheets_client():
     try:
@@ -167,36 +170,56 @@ def register_user(
 
     return True, user_id
 
-def authenticate_user(
-    email,
-    password
-):
+def authenticate_user(email, password):
 
     spreadsheet = get_spreadsheet()
-
     ws = spreadsheet.worksheet("Users")
 
     records = ws.get_all_records()
 
-    for row in records:
+    for idx, row in enumerate(records, start=2):
 
-        if row["email"].lower() == email.lower():
+        if row["email"].lower().strip() == email.lower().strip():
 
+            # Account disabled?
+            if str(row["status"]).strip().lower() != "active":
+
+                return {
+                    "success": False,
+                    "message": "Account is not active"
+                }
+
+            # Password check
             if bcrypt.checkpw(
                 password.encode(),
                 row["password_hash"].encode()
             ):
 
+                # Update last login
+                try:
+                    ws.update_cell(
+                        idx,
+                        14,  # last_login column
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                except Exception:
+                    pass
+                role = str(row["role"]).strip().lower()
+                
+                if row["email"].lower() in ADMIN_EMAILS:
+                    role = "admin"
+                    
                 return {
                     "success": True,
                     "user_id": row["user_id"],
-                    "role": row["role"],
+                    "role": role,
                     "first_name": row["first_name"],
                     "email": row["email"]
                 }
 
     return {
-        "success": False
+        "success": False,
+        "message": "Invalid email or password"
     }
 def add_video_request(
     user_id,
@@ -232,5 +255,38 @@ def add_video_request(
         now,
         ""
     ])
+
+def update_last_login(email):
+
+    try:
+
+        spreadsheet = get_spreadsheet()
+        ws = spreadsheet.worksheet("Users")
+
+        records = ws.get_all_records()
+
+        for idx, row in enumerate(records, start=2):
+
+            if row["email"].lower().strip() == email.lower().strip():
+
+                ws.update_cell(
+                    idx,
+                    14,
+                    datetime.now().strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                )
+
+                return True
+
+        return False
+
+    except Exception as e:
+
+        st.warning(
+            f"Could not update last login: {e}"
+        )
+
+        return False
 
 
