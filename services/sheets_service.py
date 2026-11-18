@@ -14,7 +14,7 @@ SCOPES = [
 ]
 
 ADMIN_EMAILS = [
-    "your_email@gmail.com"
+    "dasan.varathan@gmail.com"
 ]
 
 def get_sheets_client():
