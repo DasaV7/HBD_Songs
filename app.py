@@ -16,12 +16,13 @@ from services.sheets_service import (
     reset_remaining_from_master,
     register_user,
     authenticate_user,
-    add_video_request
+    add_video_request,
+    get_user_details
 )
-# from services.notification_service import (
-#     send_email_notification,
-#     send_whatsapp_notification
-# )
+from services.notification_service import (
+    send_email_notification,
+    #send_whatsapp_notification
+)
 os.makedirs("generated", exist_ok=True)
 
 # ====================== PAGE CONFIG ======================
@@ -499,30 +500,17 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                         )
                         
                     try:
-
-                        user_row = get_user_details(
-                            st.session_state.email
-                        )
-                    
                         send_email_notification(
                             st.session_state.email,
                             current_name,
                             link
                         )
                     
-                        if (
-                            user_row and
-                            user_row["whatsapp_consent"]
-                        ):
-                    
-                            send_whatsapp_notification(
-                                user_row["phone"],
-                                current_name,
-                                link
-                            )
+                        st.success(
+                            f"📧 Email sent to {st.session_state.email}"
+                        )
                     
                     except Exception as e:
-                    
                         st.warning(
                             f"Notification failed: {e}"
                         )
