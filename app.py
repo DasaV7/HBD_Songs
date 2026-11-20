@@ -23,6 +23,10 @@ from services.notification_service import (
     send_email_notification,
     #send_whatsapp_notification
 )
+from services.reels_service import (
+    create_instagram_reel,
+    create_instagram_post
+)
 os.makedirs("generated", exist_ok=True)
 
 # ====================== PAGE CONFIG ======================
@@ -453,6 +457,17 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                 audio_file,
                 repeats=current_repeats
             )
+            st.write("Creating Instagram Reel...")
+            reel_path = create_instagram_reel(
+                current_name,
+                audio_file
+            )
+            
+            st.write("Creating Instagram Post...")
+            
+            post_path = create_instagram_post(
+                current_name
+            )
             s.update(label="Video ready", state="complete")
         
         # ===== Generate Thumbnail AFTER the status block (safer) =====
@@ -525,7 +540,9 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
         result = {
             "name": current_name,
             "video_path": video_path,
-            "thumbnail_path": thumb_path,          # ← add this
+            "thumbnail_path": thumb_path,
+            "reel_path": reel_path,
+            "post_path": post_path,
             "link": link,
             "status": upload_status,
             "upload_time": upload_time
@@ -568,8 +585,9 @@ if st.session_state.batch_results:
     for res in st.session_state.batch_results:
         st.markdown(f"#### {res['name']} — {res['status']}")
 
-        col1, col2 = st.columns(2)
-
+        #col1, col2 = st.columns(2)
+        col1, col2, col3, col4 = st.columns(4)
+        
         with col1:
             st.markdown("**Video Preview**")
             if res.get("video_path") and os.path.exists(res["video_path"]):
@@ -584,7 +602,29 @@ if st.session_state.batch_results:
                 st.image(thumb_path, use_container_width=True)
             else:
                 st.info("Thumbnail not available")
-
+        with col3:
+        
+            st.markdown("**Instagram Reel**")
+        
+            reel_path = res.get("reel_path")
+        
+            if reel_path and os.path.exists(reel_path):
+        
+                st.video(reel_path)
+        
+            else:
+        
+                st.info("Reel not available")
+        with col4:
+            st.markdown("**Instagram Post**")
+            post_path = res.get("post_path")
+            if post_path and os.path.exists(post_path):
+                st.image(
+                    post_path,
+                    use_container_width=True
+                )
+            else:
+                st.info("Post not available")
         if res.get("link"):
             st.markdown(f"[▶ Watch on YouTube]({res['link']})")
 
