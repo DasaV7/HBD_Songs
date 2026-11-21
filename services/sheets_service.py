@@ -303,3 +303,26 @@ def get_user_details(email):
 
     return None
 
+def add_instagram_asset(
+    name,
+    reel_public_id,
+    post_public_id,
+    status="Published"
+):
+
+    spreadsheet = get_spreadsheet()
+
+    ws = spreadsheet.worksheet(
+        "InstagramAssets"
+    )
+
+    ws.append_row([
+        name,
+        reel_public_id,
+        post_public_id,
+        datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        ),
+        status
+    ])
+
