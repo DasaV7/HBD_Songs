@@ -576,35 +576,32 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                 if link and st.session_state.get("auto_upload", True):
                 
                     try:
-                        # Import here (or better: move to the top of app.py)
-                        from services.insta_service import (
-                            publish_instagram_reel,
-                            publish_instagram_post,
-                            build_caption
-                        )
-                        from services.cloudinary_service import (   # adjust name if different
-                            upload_reel_to_cloudinary,
-                            upload_post_to_cloudinary
-                        )
-                
                         caption = build_caption(current_name, link)
                 
                         # 1. Upload to Cloudinary
+                        st.write("Uploading Reel to Cloudinary...")
                         reel_result = upload_reel_to_cloudinary(reel_path, current_name)
-                        post_result = upload_post_to_cloudinary(post_path, current_name)
-                
                         reel_public_url = reel_result["secure_url"]
+                        st.write(f"Cloudinary Reel URL: {reel_public_url}")
+                
+                        st.write("Uploading Post to Cloudinary...")
+                        post_result = upload_post_to_cloudinary(post_path, current_name)
                         post_public_url = post_result["secure_url"]
+                        st.write(f"Cloudinary Post URL: {post_public_url}")
                 
                         # 2. Publish to Instagram
+                        st.write("Publishing Instagram Reel...")
                         instagram_reel_url = publish_instagram_reel(reel_public_url, caption)
-                        st.success("Instagram Reel published")
+                        st.success(f"Instagram Reel published: {instagram_reel_url}")
                 
+                        st.write("Publishing Instagram Post...")
                         instagram_post_url = publish_instagram_post(post_public_url, caption)
-                        st.success("Instagram Post published")
+                        st.success(f"Instagram Post published: {instagram_post_url}")
                 
                     except Exception as e:
-                        st.warning(f"Instagram upload failed: {e}")
+                        st.error("Instagram upload failed")
+                        st.exception(e)          # ← shows the full error
+        
         result = {
             "name": current_name,
             "video_path": video_path,
