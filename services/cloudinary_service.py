@@ -1,6 +1,8 @@
 import cloudinary
 import cloudinary.uploader
+
 import streamlit as st
+
 from datetime import datetime
 from datetime import timedelta
 
@@ -8,16 +10,40 @@ from services.sheets_service import (
     get_spreadsheet
 )
 
-from services.cloudinary_service import (
-    cleanup_old_instagram_assets
-)
-
-
 cloudinary.config(
     cloud_name=st.secrets["cloudinary"]["cloud_name"],
     api_key=st.secrets["cloudinary"]["api_key"],
     api_secret=st.secrets["cloudinary"]["api_secret"]
 )
+
+def upload_reel_to_cloudinary(
+    reel_path,
+    name
+):
+
+    result = cloudinary.uploader.upload_large(
+        reel_path,
+        resource_type="video",
+        folder="birthday_reels",
+        public_id=f"{name}_reel",
+        overwrite=True
+    )
+
+    return result
+
+def upload_post_to_cloudinary(
+    image_path,
+    name
+):
+
+    result = cloudinary.uploader.upload(
+        image_path,
+        folder="birthday_posts",
+        public_id=f"{name}_post",
+        overwrite=True
+    )
+
+    return result
 
 def delete_cloudinary_asset(
     public_id,
@@ -42,7 +68,7 @@ def delete_cloudinary_asset(
         print(e)
 
         return None
-        
+
 def cleanup_old_instagram_assets(
     days_old=3
 ):
@@ -68,6 +94,9 @@ def cleanup_old_instagram_assets(
     ):
 
         try:
+
+            if row.get("status") == "Deleted":
+                continue
 
             created = datetime.strptime(
                 row["created_date"],
@@ -116,19 +145,3 @@ def cleanup_old_instagram_assets(
             )
 
     return deleted_count
-
-try:
-
-    deleted = cleanup_old_instagram_assets(
-        days_old=3
-    )
-
-    print(
-        f"Removed {deleted} old assets"
-    )
-
-except Exception as e:
-
-    print(
-        f"Cleanup error: {e}"
-    )
