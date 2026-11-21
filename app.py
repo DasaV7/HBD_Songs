@@ -559,49 +559,40 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                 except Exception as e:
                     upload_status = f"❌ Upload failed: {e}"
                     s.update(label="Upload failed", state="error")
-                # ===== After successful YouTube upload =====
-                if link:  # YouTube link exists
-                    caption = f"""🎂 Happy Birthday {current_name}! 🎉
+                # ===== Instagram Upload (after YouTube success) =====
+                instagram_reel_url = None
+                instagram_post_url = None
                 
-                Full video on YouTube:
-                {link}
+                if link and st.session_state.get("auto_upload", True):
+                    caption = build_caption(current_name, link)
                 
-                Follow for daily birthday videos ❤️
-                #HappyBirthday #{current_name.replace(" ", "")} #BirthdayReel
-                """
-                
-                    # 1. Upload Instagram Reel
-                    instagram_reel_url = None
                     try:
-                        from services.insta_service import upload_instagram_reel
-                        if reel_path and os.path.exists(reel_path):
-                            instagram_reel_url = upload_instagram_reel(reel_path, caption)
-                            st.success("Instagram Reel uploaded")
-                    except Exception as e:
-                        st.warning(f"Instagram Reel upload failed: {e}")
+                        # 1. Upload files to Cloudinary
+                        reel_result = upload_reel_to_cloudinary(reel_path, current_name)
+                        post_result = upload_post_to_cloudinary(post_path, current_name)
                 
-                    # 2. Upload Instagram Post
-                    instagram_post_url = None
-                    try:
-                        from services.insta_service import upload_instagram_post
-                        if post_path and os.path.exists(post_path):
-                            instagram_post_url = upload_instagram_post(post_path, caption)
-                            st.success("Instagram Post uploaded")
-                    except Exception as e:
-                        st.warning(f"Instagram Post upload failed: {e}")
+                        reel_public_url = reel_result["secure_url"]
+                        post_public_url = post_result["secure_url"]
                 
-                    # 3. Save Instagram links to Google Sheet (History)
-                    try:
-                        # You can extend your add_to_history function
-                        # or create a new function to store Instagram links
-                        add_to_history(
-                            current_name,
-                            youtube_link=link,
-                            instagram_reel=instagram_reel_url or "",
-                            instagram_post=instagram_post_url or ""
+                        # 2. Publish to Instagram
+                        from services.insta_service import (
+                            publish_instagram_reel,
+                            publish_instagram_post,
+                            build_caption
                         )
+                
+                        instagram_reel_url = publish_instagram_reel(reel_public_url, caption)
+                        st.success("Instagram Reel published")
+                
+                        instagram_post_url = publish_instagram_post(post_public_url, caption)
+                        st.success("Instagram Post published")
+                
+                        # 3. (Optional) Save Cloudinary public_ids for later cleanup
+                        # You can store reel_result["public_id"] and post_result["public_id"]
+                        # in your InstagramAssets sheet here
+                
                     except Exception as e:
-                        st.warning(f"Failed to save Instagram links to sheet: {e}")
+                        st.warning(f"Instagram upload failed: {e}")
         result = {
             "name": current_name,
             "video_path": video_path,
