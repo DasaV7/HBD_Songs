@@ -361,6 +361,28 @@ with tab1:
         if not names:
             st.error("Please enter at least one name.")
             st.stop()
+        try:
+
+            from services.cloudinary_service import (
+                cleanup_old_instagram_assets
+            )
+        
+            deleted = cleanup_old_instagram_assets(
+                days_old=3
+            )
+        
+            if deleted > 0:
+        
+                st.info(
+                    f"Cloudinary cleanup removed "
+                    f"{deleted} old assets."
+                )
+        
+        except Exception as e:
+        
+            st.warning(
+                f"Cloudinary cleanup failed: {e}"
+            )
 
         st.session_state.batch_names = names[:max_videos]
         st.session_state.batch_index = 0
