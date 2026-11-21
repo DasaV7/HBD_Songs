@@ -537,6 +537,49 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                 except Exception as e:
                     upload_status = f"❌ Upload failed: {e}"
                     s.update(label="Upload failed", state="error")
+                # ===== After successful YouTube upload =====
+                if link:  # YouTube link exists
+                    caption = f"""🎂 Happy Birthday {current_name}! 🎉
+                
+                Full video on YouTube:
+                {link}
+                
+                Follow for daily birthday videos ❤️
+                #HappyBirthday #{current_name.replace(" ", "")} #BirthdayReel
+                """
+                
+                    # 1. Upload Instagram Reel
+                    instagram_reel_url = None
+                    try:
+                        from services.insta_service import upload_instagram_reel
+                        if reel_path and os.path.exists(reel_path):
+                            instagram_reel_url = upload_instagram_reel(reel_path, caption)
+                            st.success("Instagram Reel uploaded")
+                    except Exception as e:
+                        st.warning(f"Instagram Reel upload failed: {e}")
+                
+                    # 2. Upload Instagram Post
+                    instagram_post_url = None
+                    try:
+                        from services.insta_service import upload_instagram_post
+                        if post_path and os.path.exists(post_path):
+                            instagram_post_url = upload_instagram_post(post_path, caption)
+                            st.success("Instagram Post uploaded")
+                    except Exception as e:
+                        st.warning(f"Instagram Post upload failed: {e}")
+                
+                    # 3. Save Instagram links to Google Sheet (History)
+                    try:
+                        # You can extend your add_to_history function
+                        # or create a new function to store Instagram links
+                        add_to_history(
+                            current_name,
+                            youtube_link=link,
+                            instagram_reel=instagram_reel_url or "",
+                            instagram_post=instagram_post_url or ""
+                        )
+                    except Exception as e:
+                        st.warning(f"Failed to save Instagram links to sheet: {e}")
         result = {
             "name": current_name,
             "video_path": video_path,
