@@ -23,6 +23,16 @@ from services.notification_service import (
     send_email_notification,
     #send_whatsapp_notification
 )
+from services.insta_service import (
+    publish_instagram_reel,
+    publish_instagram_post,
+    build_caption
+)
+from services.cloudinary_service import (
+    upload_reel_to_cloudinary,
+    upload_post_to_cloudinary
+)
+
 from services.reels_service import (
     create_instagram_reel,
     create_instagram_post
@@ -564,10 +574,22 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                 instagram_post_url = None
                 
                 if link and st.session_state.get("auto_upload", True):
-                    caption = build_caption(current_name, link)
                 
                     try:
-                        # 1. Upload files to Cloudinary
+                        # Import here (or better: move to the top of app.py)
+                        from services.insta_service import (
+                            publish_instagram_reel,
+                            publish_instagram_post,
+                            build_caption
+                        )
+                        from services.cloudinary_service import (   # adjust name if different
+                            upload_reel_to_cloudinary,
+                            upload_post_to_cloudinary
+                        )
+                
+                        caption = build_caption(current_name, link)
+                
+                        # 1. Upload to Cloudinary
                         reel_result = upload_reel_to_cloudinary(reel_path, current_name)
                         post_result = upload_post_to_cloudinary(post_path, current_name)
                 
@@ -575,21 +597,11 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                         post_public_url = post_result["secure_url"]
                 
                         # 2. Publish to Instagram
-                        from services.insta_service import (
-                            publish_instagram_reel,
-                            publish_instagram_post,
-                            build_caption
-                        )
-                
                         instagram_reel_url = publish_instagram_reel(reel_public_url, caption)
                         st.success("Instagram Reel published")
                 
                         instagram_post_url = publish_instagram_post(post_public_url, caption)
                         st.success("Instagram Post published")
-                
-                        # 3. (Optional) Save Cloudinary public_ids for later cleanup
-                        # You can store reel_result["public_id"] and post_result["public_id"]
-                        # in your InstagramAssets sheet here
                 
                     except Exception as e:
                         st.warning(f"Instagram upload failed: {e}")
