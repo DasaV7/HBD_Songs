@@ -9,7 +9,7 @@ from services.audio_service import generate_audio
 #from services.video_service import create_video
 from services.youtube_service import (
     upload_video,
-    upload_short
+    upload_short,
 )
 from services.youtube_service import upload_video
 from services.sheets_service import (
