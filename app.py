@@ -515,6 +515,10 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
 
         link = None
         shorts_link = None
+
+        instagram_reel_url = None
+        instagram_post_url = None
+
         upload_status = "⏸️ Skipped"
         upload_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
