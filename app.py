@@ -6,12 +6,9 @@ from datetime import datetime
 
 from services.lyrics_service import generate_lyrics
 from services.audio_service import generate_audio
-#from services.video_service import create_video
-from services.youtube_service import (
-    upload_video,
-    upload_short
-)
+from services.video_service import create_video
 from services.youtube_service import upload_video
+from services.youtube_service import upload_short
 from services.sheets_service import (
     get_stats,
     select_next_names,
