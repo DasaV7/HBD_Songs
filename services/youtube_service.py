@@ -11,6 +11,11 @@ import os
 import random
 
 
+# SCOPES = [
+#     "https://www.googleapis.com/auth/youtube.upload",
+#     "https://www.googleapis.com/auth/youtube",
+#     "https://www.googleapis.com/auth/youtube.force-ssl"
+# ]
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube",
@@ -306,50 +311,62 @@ def upload_short(
     privacy_status="public"
 ):
     """
-    Upload Instagram Reel video as YouTube Shorts.
+    Upload reel video to YouTube Shorts.
     """
 
-    youtube = get_authenticated_service()
+    try:
 
-    body = {
-        "snippet": {
-            "title": title,
-            "description": description,
-            "categoryId": "22"
-        },
-        "status": {
-            "privacyStatus": privacy_status
+        youtube = get_youtube_service()
+
+        body = {
+            "snippet": {
+                "title": title[:100],
+                "description": description,
+                "categoryId": "22",
+                "tags": [
+                    "Shorts",
+                    "Happy Birthday",
+                    "Birthday Video"
+                ]
+            },
+            "status": {
+                "privacyStatus": privacy_status,
+                "selfDeclaredMadeForKids": False
+            }
         }
-    }
 
-    from googleapiclient.http import MediaFileUpload
-
-    media = MediaFileUpload(
-        video_file,
-        chunksize=-1,
-        resumable=True
-    )
-
-    request = youtube.videos().insert(
-        part="snippet,status",
-        body=body,
-        media_body=media
-    )
-
-    response = None
-
-    while response is None:
-        status, response = request.next_chunk()
-
-    if "id" not in response:
-        raise Exception(
-            f"Shorts upload failed: {response}"
+        media = MediaFileUpload(
+            video_file,
+            mimetype="video/mp4",
+            resumable=True
         )
 
-    video_id = response["id"]
+        request = youtube.videos().insert(
+            part="snippet,status",
+            body=body,
+            media_body=media
+        )
 
-    short_url = (
-        f"https://www.youtube.com/watch?v={video\_id}"
-    )
+        response = None
 
-    return short_url
+        while response is None:
+
+            status, response = request.next_chunk()
+
+            if status:
+                st.write(
+                    f"Shorts Upload Progress: "
+                    f"{int(status.progress() * 100)}%"
+                )
+
+        video_id = response["id"]
+
+        return (
+            f"https://www.youtube.com/watch?v={video_id}"
+        )
+
+    except Exception as e:
+
+        raise Exception(
+            f"Shorts upload failed: {e}"
+        )
