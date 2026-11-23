@@ -298,3 +298,58 @@ Thank you for watching and Happy Birthday {name}!
 
     except Exception as e:
         raise Exception(f"Upload failed: {str(e)}")
+
+def upload_short(
+    video_file,
+    title,
+    description,
+    privacy_status="public"
+):
+    """
+    Upload Instagram Reel video as YouTube Shorts.
+    """
+
+    youtube = get_authenticated_service()
+
+    body = {
+        "snippet": {
+            "title": title,
+            "description": description,
+            "categoryId": "22"
+        },
+        "status": {
+            "privacyStatus": privacy_status
+        }
+    }
+
+    from googleapiclient.http import MediaFileUpload
+
+    media = MediaFileUpload(
+        video_file,
+        chunksize=-1,
+        resumable=True
+    )
+
+    request = youtube.videos().insert(
+        part="snippet,status",
+        body=body,
+        media_body=media
+    )
+
+    response = None
+
+    while response is None:
+        status, response = request.next_chunk()
+
+    if "id" not in response:
+        raise Exception(
+            f"Shorts upload failed: {response}"
+        )
+
+    video_id = response["id"]
+
+    short_url = (
+        f"https://www.youtube.com/watch?v={video\_id}"
+    )
+
+    return short_url
