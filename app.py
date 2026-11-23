@@ -514,6 +514,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
             st.warning(f"Thumbnail skipped: {e}")
 
         link = None
+        shorts_link = None
         upload_status = "⏸️ Skipped"
         upload_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -530,7 +531,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                     # Upload YouTube Shorts
                     # ==========================
                     
-                    shorts_link = None
+                    
                     
                     try:
                     
