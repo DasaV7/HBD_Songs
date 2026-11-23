@@ -6,7 +6,11 @@ from datetime import datetime
 
 from services.lyrics_service import generate_lyrics
 from services.audio_service import generate_audio
-from services.video_service import create_video
+#from services.video_service import create_video
+from services.youtube_service import (
+    upload_video,
+    upload_short
+)
 from services.youtube_service import upload_video
 from services.sheets_service import (
     get_stats,
@@ -525,8 +529,43 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
                         personalized_message,
                         name=current_name
                     )
+                    # ==========================
+                    # Upload YouTube Shorts
+                    # ==========================
+                    
+                    shorts_link = None
+                    
+                    try:
+                    
+                        shorts_link = upload_short(
+                    
+                            reel_path,
+                    
+                            f"Happy Birthday {current_name} 🎂 #Shorts",
+                    
+                            f"""
+                    Happy Birthday {current_name}!
+                    
+                    Watch the full birthday video here:
+                    {link}
+                    
+                    #Shorts
+                    #HappyBirthday
+                    #BirthdayVideo
+                    """
+                        )
+                    
+                        st.success(
+                            "📱 YouTube Shorts uploaded"
+                        )
+                    
+                    except Exception as e:
+                    
+                        st.warning(
+                            f"Shorts upload failed: {e}"
+                        )
                     upload_status = "✅ Uploaded successfully"
-
+                    
                     # Always log to History
                     add_to_history(current_name, link or "")
                     try:
@@ -609,6 +648,7 @@ if st.session_state.batch_running and not st.session_state.stop_batch:
             "reel_path": reel_path,
             "post_path": post_path,
             "link": link,
+            "shorts_link": shorts_link,
             "status": upload_status,
             "upload_time": upload_time
         }
@@ -692,6 +732,10 @@ if st.session_state.batch_results:
                 st.info("Post not available")
         if res.get("link"):
             st.markdown(f"[▶ Watch on YouTube]({res['link']})")
+        if res.get("shorts_link"):
+            st.markdown(
+                f"{res['shorts_link']}"
+            )
 
         st.markdown("---")
 
